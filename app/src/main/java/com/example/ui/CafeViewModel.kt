@@ -1,0 +1,149 @@
+package com.example.ui
+
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.CafeEntity
+import com.example.data.CafeRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
+
+class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
+
+    val allCafes: StateFlow<List<CafeEntity>> = repository.allCafes
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val _selectedCafe = MutableStateFlow<CafeEntity?>(null)
+    val selectedCafe: StateFlow<CafeEntity?> = _selectedCafe.asStateFlow()
+
+    private val _saveSuccess = MutableStateFlow(false)
+    val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
+
+    fun selectCafe(cafe: CafeEntity?) {
+        _selectedCafe.value = cafe
+    }
+
+    fun resetSaveSuccess() {
+        _saveSuccess.value = false
+    }
+
+    fun addCafe(
+        context: Context,
+        name: String,
+        address: String,
+        latitude: Double,
+        longitude: Double,
+        rating: Int,
+        coffeeQualityRating: Int,
+        atmosphereRating: Int,
+        notes: String,
+        selectedPhotoUris: List<Uri>,
+        mapShareLink: String? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                val savedPhotoPaths = mutableListOf<String>()
+                
+                // Copy selected photos to internal storage to persist them
+                selectedPhotoUris.forEach { uri ->
+                    val path = saveImageToInternalStorage(context, uri)
+                    if (path != null) {
+                        savedPhotoPaths.add(path)
+                    }
+                }
+
+                val primaryPhoto = savedPhotoPaths.firstOrNull()
+                val secondaryPhotos = if (savedPhotoPaths.size > 1) {
+                    savedPhotoPaths.drop(1).joinToString(";")
+                } else null
+
+                val newCafe = CafeEntity(
+                    name = name,
+                    address = address,
+                    latitude = latitude,
+                    longitude = longitude,
+                    rating = rating,
+                    coffeeQualityRating = coffeeQualityRating,
+                    atmosphereRating = atmosphereRating,
+                    notes = notes,
+                    photoUri = primaryPhoto,
+                    photoUris = secondaryPhotos,
+                    mapShareLink = mapShareLink
+                )
+
+                repository.insertCafe(newCafe)
+                _saveSuccess.value = true
+                Log.d("CafeViewModel", "Successfully saved cafe log: $name")
+            } catch (e: Exception) {
+                Log.e("CafeViewModel", "Failed to save cafe: ${e.message}", e)
+            }
+        }
+    }
+
+    fun deleteCafe(cafe: CafeEntity) {
+        viewModelScope.launch {
+            try {
+                // Delete associated photo files if stored internally
+                cafe.photoUri?.let { path ->
+                    val file = File(path)
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                }
+                cafe.photoUris?.split(";")?.forEach { path ->
+                    val file = File(path)
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                }
+                
+                repository.deleteCafe(cafe)
+                if (_selectedCafe.value?.id == cafe.id) {
+                    _selectedCafe.value = null
+                }
+            } catch (e: Exception) {
+                Log.e("CafeViewModel", "Failed to delete cafe: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun saveImageToInternalStorage(context: Context, uri: Uri): String? {
+        return try {
+            val contentResolver = context.contentResolver
+            val inputStream = contentResolver.openInputStream(uri) ?: return null
+            
+            // Create a unique filename in internal files dir
+            val dir = File(context.filesDir, "cafe_photos")
+            if (!dir.exists()) {
+                dir.mkdirs()
+            }
+            
+            val filename = "cafe_${UUID.randomUUID()}.jpg"
+            val file = File(dir, filename)
+            
+            val outputStream = FileOutputStream(file)
+            inputStream.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+            file.absolutePath
+        } catch (e: Exception) {
+            Log.e("CafeViewModel", "Error copying photo: ${e.message}", e)
+            null
+        }
+    }
+}
