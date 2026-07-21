@@ -119,7 +119,10 @@ fun DashboardScreen(
         floatingActionButton = {
             // Keep FAB as bottom action for easy reach, styled beautifully in terracotta
             FloatingActionButton(
-                onClick = onNavigateToAddCafe,
+                onClick = {
+                    cafeViewModel.setEditingCafe(null)
+                    onNavigateToAddCafe()
+                },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape,

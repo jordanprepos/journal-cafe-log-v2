@@ -29,11 +29,18 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
     private val _selectedCafe = MutableStateFlow<CafeEntity?>(null)
     val selectedCafe: StateFlow<CafeEntity?> = _selectedCafe.asStateFlow()
 
+    private val _editingCafe = MutableStateFlow<CafeEntity?>(null)
+    val editingCafe: StateFlow<CafeEntity?> = _editingCafe.asStateFlow()
+
     private val _saveSuccess = MutableStateFlow(false)
     val saveSuccess: StateFlow<Boolean> = _saveSuccess.asStateFlow()
 
     fun selectCafe(cafe: CafeEntity?) {
         _selectedCafe.value = cafe
+    }
+
+    fun setEditingCafe(cafe: CafeEntity?) {
+        _editingCafe.value = cafe
     }
 
     fun resetSaveSuccess() {
@@ -93,6 +100,68 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
                 Log.d("CafeViewModel", "Successfully saved cafe log: $name")
             } catch (e: Exception) {
                 Log.e("CafeViewModel", "Failed to save cafe: ${e.message}", e)
+            }
+        }
+    }
+
+    fun updateCafe(
+        context: Context,
+        id: Int,
+        name: String,
+        address: String,
+        latitude: Double,
+        longitude: Double,
+        rating: Int,
+        coffeeQualityRating: Int,
+        atmosphereRating: Int,
+        notes: String,
+        keptPhotoPaths: List<String>,
+        newPhotoUris: List<Uri>,
+        mapShareLink: String? = null,
+        tags: String? = null,
+        favoriteDrink: String? = null
+    ) {
+        viewModelScope.launch {
+            try {
+                val savedPhotoPaths = mutableListOf<String>()
+                // Add kept photos
+                savedPhotoPaths.addAll(keptPhotoPaths)
+                
+                // Copy new photos to internal storage to persist them
+                newPhotoUris.forEach { uri ->
+                    val path = saveImageToInternalStorage(context, uri)
+                    if (path != null) {
+                        savedPhotoPaths.add(path)
+                    }
+                }
+
+                val primaryPhoto = savedPhotoPaths.firstOrNull()
+                val secondaryPhotos = if (savedPhotoPaths.size > 1) {
+                    savedPhotoPaths.drop(1).joinToString(";")
+                } else null
+
+                val updatedCafe = CafeEntity(
+                    id = id,
+                    name = name,
+                    address = address,
+                    latitude = latitude,
+                    longitude = longitude,
+                    rating = rating,
+                    coffeeQualityRating = coffeeQualityRating,
+                    atmosphereRating = atmosphereRating,
+                    notes = notes,
+                    photoUri = primaryPhoto,
+                    photoUris = secondaryPhotos,
+                    mapShareLink = mapShareLink,
+                    tags = tags,
+                    favoriteDrink = favoriteDrink
+                )
+
+                repository.insertCafe(updatedCafe)
+                _saveSuccess.value = true
+                Log.d("CafeViewModel", "Successfully updated cafe log: $name")
+            } catch (e: Exception) {
+                Log.e("CafeViewModel", "Failed to update cafe: ${e.message}", e)
             }
         }
     }

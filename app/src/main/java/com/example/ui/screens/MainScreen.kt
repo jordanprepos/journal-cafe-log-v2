@@ -113,6 +113,11 @@ fun MainScreen(
                 CafeDetailsView(
                     cafe = targetCafe,
                     onDismiss = { cafeViewModel.selectCafe(null) },
+                    onEditCafe = {
+                        cafeViewModel.setEditingCafe(targetCafe)
+                        cafeViewModel.selectCafe(null)
+                        onNavigateToAddCafe()
+                    },
                     sharedTransitionScope = this@SharedTransitionLayout,
                     animatedVisibilityScope = this@AnimatedContent
                 )

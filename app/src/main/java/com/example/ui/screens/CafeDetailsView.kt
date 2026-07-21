@@ -47,6 +47,7 @@ import java.util.Locale
 fun CafeDetailsView(
     cafe: CafeEntity,
     onDismiss: () -> Unit,
+    onEditCafe: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier
@@ -170,6 +171,20 @@ fun CafeDetailsView(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Navigate Back",
+                            tint = Color.White
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onEditCafe,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                            .testTag("edit_cafe_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Cafe Log",
                             tint = Color.White
                         )
                     }

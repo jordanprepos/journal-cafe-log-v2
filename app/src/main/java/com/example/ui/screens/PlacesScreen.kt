@@ -37,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.viewinterop.AndroidView
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.JavascriptInterface
 import com.example.data.CafeEntity
 import com.example.ui.CafeViewModel
 import com.google.android.gms.maps.model.CameraPosition
@@ -89,6 +93,9 @@ fun PlacesScreen(
     var offlineOffsetX by remember { mutableStateOf(0f) }
     var offlineOffsetY by remember { mutableStateOf(0f) }
 
+    // WebView reference for OpenStreetMap
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
     val mapCenter = remember(cafes) {
         if (cafes.isNotEmpty()) {
             val avgLat = cafes.map { it.latitude }.average()
@@ -96,6 +103,123 @@ fun PlacesScreen(
             Pair(avgLat, avgLng)
         } else {
             Pair(37.7749, -122.4194)
+        }
+    }
+
+    val htmlContent = remember(cafes, mapCenter) {
+        val cafeMarkersJs = cafes.joinToString(separator = "\n") { cafe ->
+            val escapedName = cafe.name.replace("'", "\\'").replace("\"", "\\\"").replace("\n", " ")
+            "addMarker(${cafe.id}, ${cafe.latitude}, ${cafe.longitude}, \"$escapedName\");"
+        }
+        
+        """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+            <style>
+                body { padding: 0; margin: 0; background-color: #f4ede6; }
+                html, body, #map { height: 100%; width: 100vw; }
+                .leaflet-control-attribution { display: none !important; }
+                .custom-div-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            </style>
+        </head>
+        <body>
+            <div id="map"></div>
+            <script>
+                var map = L.map('map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([${mapCenter.first}, ${mapCenter.second}], 11);
+                
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19
+                }).addTo(map);
+
+                var markers = {};
+
+                function addMarker(id, lat, lng, name) {
+                    var iconHtml = '<div style="background-color: #795548; width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">' +
+                        '<svg style="width:18px;height:18px;fill:white" viewBox="0 0 24 24"><path d="M2 21h18v-2H2v2M20 8h-2V5h2v3M4 19h12v-4H4v4m0-6h12V5H4v8m16-5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-4v7h4z"/></svg>' +
+                        '</div>';
+                    
+                    var customIcon = L.divIcon({
+                        html: iconHtml,
+                        className: 'custom-div-icon',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 16]
+                    });
+
+                    var marker = L.marker([lat, lng], {icon: customIcon}).addTo(map);
+                    marker.on('click', function() {
+                        if (window.AndroidBridge) {
+                            window.AndroidBridge.onCafeClicked(id);
+                        }
+                    });
+                    markers[id] = {
+                        marker: marker,
+                        lat: lat,
+                        lng: lng
+                    };
+                }
+
+                function selectCafe(id) {
+                    for (var key in markers) {
+                        var isSel = (key == id);
+                        var bg = isSel ? '#6750A4' : '#795548';
+                        var border = isSel ? '#EADDFF' : '#FFFFFF';
+                        var scale = isSel ? 'scale(1.2)' : 'scale(1)';
+                        markers[key].marker.setIcon(L.divIcon({
+                            html: '<div style="background-color: ' + bg + '; width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid ' + border + '; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.4); transform: ' + scale + '; transition: all 0.2s ease;">' +
+                                '<svg style="width:18px;height:18px;fill:white" viewBox="0 0 24 24"><path d="M2 21h18v-2H2v2M20 8h-2V5h2v3M4 19h12v-4H4v4m0-6h12V5H4v8m16-5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-4v7h4z"/></svg>' +
+                                '</div>',
+                            className: 'custom-div-icon',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                        }));
+                        if (isSel) {
+                            map.setView([markers[key].lat, markers[key].lng], map.getZoom());
+                        }
+                    }
+                }
+
+                function zoomIn() {
+                    map.zoomIn();
+                }
+
+                function zoomOut() {
+                    map.zoomOut();
+                }
+
+                function resetCenter() {
+                    map.setView([${mapCenter.first}, ${mapCenter.second}], 11);
+                }
+
+                // Add all markers
+                $cafeMarkersJs
+            </script>
+        </body>
+        </html>
+        """.trimIndent()
+    }
+
+    LaunchedEffect(selectedCafeOnMap, useGoogleMap, webViewRef) {
+        if (!useGoogleMap) {
+            val webView = webViewRef
+            if (webView != null) {
+                if (selectedCafeOnMap != null) {
+                    webView.evaluateJavascript("javascript:selectCafe(${selectedCafeOnMap?.id})", null)
+                } else {
+                    webView.evaluateJavascript("javascript:selectCafe(-1)", null)
+                }
+            }
         }
     }
 
@@ -325,140 +449,36 @@ fun PlacesScreen(
                         }
                     }
                 } else {
-                    // Custom Vector Offline Map (Canvas)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFFEADDFF)) // Soft lavender map ground
-                            .pointerInput(Unit) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    offlineScale = (offlineScale * zoom).coerceIn(0.5f, 4.0f)
-                                    offlineOffsetX += pan.x
-                                    offlineOffsetY += pan.y
+                    // OpenStreetMap WebView (No API Key Required)
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.apply {
+                                    javaScriptEnabled = true
+                                    domStorageEnabled = true
+                                    useWideViewPort = true
+                                    loadWithOverviewMode = true
                                 }
-                            }
-                    ) {
-                        // Interactive Graphics Container
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer(
-                                    scaleX = offlineScale,
-                                    scaleY = offlineScale,
-                                    translationX = offlineOffsetX,
-                                    translationY = offlineOffsetY
-                                )
-                        ) {
-                            // 1. Map Canvas - stylized vector roads, rivers, parks
-                            Canvas(
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                val w = size.width
-                                val h = size.height
-                                val ccx = w / 2
-                                val ccy = h / 2
-
-                                // Draw Parks (Soft green circles & blocks)
-                                drawCircle(
-                                    color = Color(0xFFD4E2C6),
-                                    radius = 280f,
-                                    center = Offset(ccx - 300f, ccy - 200f)
-                                )
-                                drawRoundRect(
-                                    color = Color(0xFFD4E2C6),
-                                    topLeft = Offset(ccx + 400f, ccy + 100f),
-                                    size = Size(200f, 400f),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(30f)
-                                )
-
-                                // Draw Water Bodies (Soft bay or river)
-                                val riverPath = Path().apply {
-                                    moveTo(0f, ccy + 500f)
-                                    cubicTo(
-                                        ccx - 400f, ccy + 400f,
-                                        ccx - 200f, ccy + 800f,
-                                        w, ccy + 600f
-                                    )
-                                    lineTo(w, h)
-                                    lineTo(0f, h)
-                                    close()
-                                }
-                                drawPath(path = riverPath, color = Color(0xFFC0D5E3))
-
-                                // Draw Roads/Streets (Elegant grids of sleek cream/lavender lanes)
-                                val roadColor = Color(0xFFF3EDF7)
-                                val highwayColor = Color(0xFFD0BCFF)
-
-                                // Horizontal streets
-                                for (i in -4..4) {
-                                    val yOffset = ccy + i * 200f
-                                    drawLine(
-                                        color = roadColor,
-                                        start = Offset(0f, yOffset),
-                                        end = Offset(w, yOffset),
-                                        strokeWidth = 6f
-                                    )
-                                }
-
-                                // Vertical streets
-                                for (i in -4..4) {
-                                    val xOffset = ccx + i * 200f
-                                    drawLine(
-                                        color = roadColor,
-                                        start = Offset(xOffset, 0f),
-                                        end = Offset(xOffset, h),
-                                        strokeWidth = 6f
-                                    )
-                                }
-
-                                // Main Diagonal Boulevard
-                                drawLine(
-                                    color = highwayColor,
-                                    start = Offset(0f, 0f),
-                                    end = Offset(w, h),
-                                    strokeWidth = 14f
-                                )
-                            }
-
-                            // 2. Overlaid Markers
-                            cafes.forEach { cafe ->
-                                // Calculate linear offset relative to the centered coordinate
-                                val deltaLat = cafe.latitude - centerLat
-                                val deltaLng = cafe.longitude - centerLng
-
-                                val markerX = deltaLng * scaleFactor
-                                val markerY = -deltaLat * scaleFactor // Inverted vertical coordinate
-
-                                // Render custom interactive marker box
-                                Box(
-                                    modifier = Modifier
-                                        .offset(
-                                            x = cx + (markerX).dp - 18.dp,
-                                            y = cy + (markerY).dp - 18.dp
-                                        )
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (selectedCafeOnMap?.id == cafe.id) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.secondary
-                                        )
-                                        .border(2.dp, Color.White, CircleShape)
-                                        .clickable {
-                                            selectedCafeOnMap = cafe
+                                webViewClient = WebViewClient()
+                                addJavascriptInterface(object {
+                                    @JavascriptInterface
+                                    fun onCafeClicked(id: Long) {
+                                        val found = cafes.firstOrNull { it.id.toLong() == id }
+                                        if (found != null) {
+                                            selectedCafeOnMap = found
                                         }
-                                        .testTag("map_marker_${cafe.id}"),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocalCafe,
-                                        contentDescription = cafe.name,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                                    }
+                                }, "AndroidBridge")
+                                
+                                loadDataWithBaseURL("https://openstreetmap.org", htmlContent, "text/html", "UTF-8", null)
+                                webViewRef = this
                             }
+                        },
+                        update = { webView ->
+                            webViewRef = webView
                         }
-                    }
+                    )
                 }
 
                 // HUD Controls
@@ -478,7 +498,7 @@ fun PlacesScreen(
                                     (currentZoom + 1f).coerceAtMost(21f)
                                 )
                             } else {
-                                offlineScale = (offlineScale + 0.3f).coerceAtMost(4.0f)
+                                webViewRef?.evaluateJavascript("javascript:zoomIn()", null)
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -495,7 +515,7 @@ fun PlacesScreen(
                                     (currentZoom - 1f).coerceAtLeast(1f)
                                 )
                             } else {
-                                offlineScale = (offlineScale - 0.3f).coerceAtLeast(0.5f)
+                                webViewRef?.evaluateJavascript("javascript:zoomOut()", null)
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -511,9 +531,7 @@ fun PlacesScreen(
                                     11f
                                 )
                             } else {
-                                offlineScale = 1.2f
-                                offlineOffsetX = 0f
-                                offlineOffsetY = 0f
+                                webViewRef?.evaluateJavascript("javascript:resetCenter()", null)
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -555,7 +573,7 @@ fun PlacesScreen(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "Offline Stylized Map",
+                                text = "OpenStreetMap (Free)",
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                 color = if (!useGoogleMap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -607,7 +625,7 @@ fun PlacesScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
-                                    text = "MAPS_API_KEY is not configured in Secrets. Google Map tiles cannot be loaded. Please use \"Offline Stylized Map\" above for testing.",
+                                    text = "MAPS_API_KEY is not configured in Secrets. Google Map tiles cannot be loaded. Please use \"OpenStreetMap (Free)\" above for testing.",
                                     style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                     modifier = Modifier.weight(1f)
                                 )

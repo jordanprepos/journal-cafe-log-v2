@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import java.io.File
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -9,6 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
@@ -136,6 +139,45 @@ fun AddCafeScreen(
     var notes by remember { mutableStateOf("") }
     
     val selectedPhotos = remember { mutableStateListOf<Uri>() }
+    val editingCafe by cafeViewModel.editingCafe.collectAsState()
+    val existingPhotos = remember { mutableStateListOf<String>() }
+
+    // React to editingCafe to load or clear its data
+    LaunchedEffect(editingCafe) {
+        if (editingCafe != null) {
+            name = editingCafe!!.name
+            address = editingCafe!!.address
+            mapShareLink = editingCafe!!.mapShareLink
+            tags = editingCafe!!.tags ?: ""
+            favoriteDrink = editingCafe!!.favoriteDrink ?: ""
+            latitude = String.format(java.util.Locale.US, "%.6f", editingCafe!!.latitude)
+            longitude = String.format(java.util.Locale.US, "%.6f", editingCafe!!.longitude)
+            rating = editingCafe!!.rating
+            coffeeQualityRating = editingCafe!!.coffeeQualityRating
+            atmosphereRating = editingCafe!!.atmosphereRating
+            notes = editingCafe!!.notes
+            
+            existingPhotos.clear()
+            selectedPhotos.clear()
+            editingCafe!!.photoUri?.let { existingPhotos.add(it) }
+            editingCafe!!.photoUris?.split(";")?.filter { it.isNotEmpty() }?.forEach { existingPhotos.add(it) }
+        } else {
+            name = ""
+            address = ""
+            mapShareLink = null
+            tags = ""
+            favoriteDrink = ""
+            latitude = "37.7749"
+            longitude = "-122.4194"
+            rating = 5
+            coffeeQualityRating = 5
+            atmosphereRating = 5
+            notes = ""
+            
+            existingPhotos.clear()
+            selectedPhotos.clear()
+        }
+    }
 
     // Launcher for multiple photo selection
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -157,7 +199,7 @@ fun AddCafeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Log New Cafe Visit", fontWeight = FontWeight.Bold) },
+                title = { Text(if (editingCafe != null) "Edit Cafe Log Entry" else "Log New Cafe Visit", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(
                         onClick = onNavigateBack,
@@ -801,7 +843,8 @@ fun AddCafeScreen(
                         }
                     }
 
-                    if (selectedPhotos.isEmpty()) {
+                    val hasPhotos = existingPhotos.isNotEmpty() || selectedPhotos.isNotEmpty()
+                    if (!hasPhotos) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -833,6 +876,40 @@ fun AddCafeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            items(existingPhotos) { path ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.Gray)
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(File(path))
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Existing Photo",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    // Remove Photo badge button
+                                    IconButton(
+                                        onClick = { existingPhotos.remove(path) },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .size(24.dp)
+                                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                            .padding(2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Remove photo",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                }
+                            }
                             items(selectedPhotos) { uri ->
                                 Box(
                                     modifier = Modifier
@@ -906,12 +983,13 @@ fun AddCafeScreen(
                     tags.split(";").map { it.trim() }.filter { it.isNotEmpty() }
                 }
 
-                Row(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     presetTags.forEach { presetTag ->
                         val isSelected = currentTagList.any { it.equals(presetTag, ignoreCase = true) }
@@ -991,21 +1069,44 @@ fun AddCafeScreen(
                     val latVal = latitude.toDoubleOrNull() ?: 37.7749
                     val lngVal = longitude.toDoubleOrNull() ?: -122.4194
 
-                    cafeViewModel.addCafe(
-                        context = context,
-                        name = name,
-                        address = address.ifBlank { name },
-                        latitude = latVal,
-                        longitude = lngVal,
-                        rating = rating,
-                        coffeeQualityRating = coffeeQualityRating,
-                        atmosphereRating = atmosphereRating,
-                        notes = notes,
-                        selectedPhotoUris = selectedPhotos.toList(),
-                        mapShareLink = mapShareLink ?: "https://www.google.com/maps/search/?api=1&query=${Uri.encode(name + " " + address)}",
-                        tags = tags.ifBlank { null },
-                        favoriteDrink = favoriteDrink.ifBlank { null }
-                    )
+                    val finalMapShareLink = mapShareLink ?: "https://www.google.com/maps/search/?api=1&query=${Uri.encode(name + " " + address)}"
+
+                    val currentEditingCafe = editingCafe
+                    if (currentEditingCafe != null) {
+                        cafeViewModel.updateCafe(
+                            context = context,
+                            id = currentEditingCafe.id,
+                            name = name,
+                            address = address.ifBlank { name },
+                            latitude = latVal,
+                            longitude = lngVal,
+                            rating = rating,
+                            coffeeQualityRating = coffeeQualityRating,
+                            atmosphereRating = atmosphereRating,
+                            notes = notes,
+                            keptPhotoPaths = existingPhotos.toList(),
+                            newPhotoUris = selectedPhotos.toList(),
+                            mapShareLink = finalMapShareLink,
+                            tags = tags.ifBlank { null },
+                            favoriteDrink = favoriteDrink.ifBlank { null }
+                        )
+                    } else {
+                        cafeViewModel.addCafe(
+                            context = context,
+                            name = name,
+                            address = address.ifBlank { name },
+                            latitude = latVal,
+                            longitude = lngVal,
+                            rating = rating,
+                            coffeeQualityRating = coffeeQualityRating,
+                            atmosphereRating = atmosphereRating,
+                            notes = notes,
+                            selectedPhotoUris = selectedPhotos.toList(),
+                            mapShareLink = finalMapShareLink,
+                            tags = tags.ifBlank { null },
+                            favoriteDrink = favoriteDrink.ifBlank { null }
+                        )
+                    }
                 },
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
@@ -1015,15 +1116,19 @@ fun AddCafeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
-                    .padding(bottom = 24.dp)
                     .testTag("save_cafe_button")
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(imageVector = Icons.Default.Save, contentDescription = "Save")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Cafe Log Entry", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(
+                        text = if (editingCafe != null) "Update Cafe Log Entry" else "Save Cafe Log Entry",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 }
             }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
