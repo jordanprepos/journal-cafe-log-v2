@@ -29,6 +29,34 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
     private val _selectedCafe = MutableStateFlow<CafeEntity?>(null)
     val selectedCafe: StateFlow<CafeEntity?> = _selectedCafe.asStateFlow()
 
+    private val _isDarkTheme = MutableStateFlow<Boolean?>(null) // null means follow system theme
+    val isDarkTheme: StateFlow<Boolean?> = _isDarkTheme.asStateFlow()
+
+    fun setDarkTheme(context: Context, value: Boolean?) {
+        _isDarkTheme.value = value
+        saveThemePreference(context, value)
+    }
+
+    fun loadThemePreference(context: Context) {
+        val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val valueStr = prefs.getString("theme_mode", "auto")
+        _isDarkTheme.value = when (valueStr) {
+            "light" -> false
+            "dark" -> true
+            else -> null
+        }
+    }
+
+    private fun saveThemePreference(context: Context, value: Boolean?) {
+        val prefs = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val valueStr = when (value) {
+            false -> "light"
+            true -> "dark"
+            else -> "auto"
+        }
+        prefs.edit().putString("theme_mode", valueStr).apply()
+    }
+
     private val _editingCafe = MutableStateFlow<CafeEntity?>(null)
     val editingCafe: StateFlow<CafeEntity?> = _editingCafe.asStateFlow()
 

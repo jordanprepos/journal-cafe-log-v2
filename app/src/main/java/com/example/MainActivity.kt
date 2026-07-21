@@ -35,9 +35,13 @@ class MainActivity : ComponentActivity() {
         // 2. Initialize ViewModels manually via factories (no heavy DI frameworks required)
         val authViewModel = AuthViewModel(applicationContext)
         val cafeViewModel = CafeViewModel(repository)
+        cafeViewModel.loadThemePreference(applicationContext)
 
         setContent {
-            MyApplicationTheme {
+            val isDarkTheme by cafeViewModel.isDarkTheme.collectAsState()
+            val useDarkTheme = isDarkTheme ?: androidx.compose.foundation.isSystemInDarkTheme()
+
+            MyApplicationTheme(darkTheme = useDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

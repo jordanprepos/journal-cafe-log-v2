@@ -226,71 +226,6 @@ fun AddCafeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Interactive Mini-Map (Above the Input field)
-            val mapLat = latitude.toDoubleOrNull() ?: 37.7749
-            val mapLng = longitude.toDoubleOrNull() ?: -122.4194
-            
-            AddCafeMiniMap(
-                latitude = mapLat,
-                longitude = mapLng,
-                isManualMode = isManualModeEnabled,
-                onCoordinatesChanged = { newLat, newLng ->
-                    latitude = String.format(java.util.Locale.US, "%.6f", newLat)
-                    longitude = String.format(java.util.Locale.US, "%.6f", newLng)
-                    if (address.isBlank() || address.startsWith("Manual Pin") || address.startsWith("Manually Dropped")) {
-                        address = String.format(java.util.Locale.US, "Manual Pin (Lat: %.4f, Lng: %.4f)", newLat, newLng)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("add_cafe_mini_map")
-            )
-
-            if (isManualModeEnabled) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("manual_mode_active_banner")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Manual Mode Active",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Manual Pin Placement Active",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = "Long-press anywhere on the mini-map above to set the location's latitude and longitude.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                            )
-                        }
-                        IconButton(onClick = { isManualModeEnabled = false }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-
             // Cafe Name & Location Input with Autocomplete
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -345,41 +280,7 @@ fun AddCafeScreen(
                     }
                 }
 
-                val isLink = remember(name) {
-                    name.trim().startsWith("http") || 
-                    name.contains("maps.google") || 
-                    name.contains("maps.app.goo") || 
-                    name.contains("goo.gl/maps")
-                }
-
-                // If empty name, show a Tip
-                if (name.isBlank()) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Tip Info",
-                                tint = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "💡 Tip: You can paste a Google Maps share link to auto-fill the location name, address, and GPS coordinates instantly!",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-                }
+                val isLink = false
 
                 // If there's a parsing error, display it
                 if (parseError != null) {
@@ -410,8 +311,8 @@ fun AddCafeScreen(
                     }
                 }
 
-                // If link or suggestions are present, show container
-                if (isLink || (isSuggestionsExpanded && (filteredSuggestions.isNotEmpty() || isSearchingOnline))) {
+                // If suggestions are present, show container
+                if (isSuggestionsExpanded && (filteredSuggestions.isNotEmpty() || isSearchingOnline)) {
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
@@ -425,81 +326,7 @@ fun AddCafeScreen(
                             modifier = Modifier.padding(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            if (isLink) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                                        .clickable(enabled = !isParsingUrl) {
-                                            coroutineScope.launch {
-                                                isParsingUrl = true
-                                                parseError = null
-                                                val parsed = parseGoogleMapsUrl(name)
-                                                if (parsed != null) {
-                                                    name = parsed.name
-                                                    address = parsed.address
-                                                    latitude = parsed.latitude.toString()
-                                                    longitude = parsed.longitude.toString()
-                                                    mapShareLink = parsed.shareLink
-                                                    isSuggestionsExpanded = false
-                                                } else {
-                                                    parseError = "Failed to load location coordinates. Please verify your link or enter details manually."
-                                                }
-                                                isParsingUrl = false
-                                            }
-                                        }
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    if (isParsingUrl) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            strokeWidth = 2.dp
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Link,
-                                            contentDescription = "Link Icon",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = if (isParsingUrl) "Importing location..." else "Import Location from Google Maps Link",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = if (isParsingUrl) "Connecting and extracting GPS coords..." else "Tap to resolve coordinates automatically",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                                        )
-                                    }
-                                    if (!isParsingUrl) {
-                                        Icon(
-                                            imageVector = Icons.Default.KeyboardArrowRight,
-                                            contentDescription = "Import",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (isSuggestionsExpanded && (filteredSuggestions.isNotEmpty() || isSearchingOnline)) {
-                                if (isLink) {
-                                    HorizontalDivider(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                }
-
-                                if (isSearchingOnline) {
+                            if (isSearchingOnline) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -637,7 +464,7 @@ fun AddCafeScreen(
                         }
                     }
                 }
-            }  }
+            }
 
             // Address Input
             OutlinedTextField(
@@ -651,108 +478,6 @@ fun AddCafeScreen(
                     .fillMaxWidth()
                     .testTag("cafe_address_input")
             )
-
-            // Maps Share Link Banner (Visual feedback when link is set)
-            if (!mapShareLink.isNullOrBlank()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Link,
-                        contentDescription = "Link Icon",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Google Maps Share Link Captured!",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = mapShareLink ?: "",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                            maxLines = 1
-                        )
-                    }
-                }
-            }
-
-            // Advanced Coordinates (Optional toggle)
-            var showAdvancedCoords by remember { mutableStateOf(false) }
-            Column {
-                TextButton(
-                    onClick = { showAdvancedCoords = !showAdvancedCoords },
-                    modifier = Modifier.align(Alignment.Start)
-                ) {
-                    Icon(
-                        imageVector = if (showAdvancedCoords) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Toggle Coordinates"
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (showAdvancedCoords) "Hide GPS Coordinates" else "Show GPS Coordinates",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-
-                if (showAdvancedCoords) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = latitude,
-                            onValueChange = { 
-                                latitude = it
-                                // Auto-assign share link if customized
-                                if (mapShareLink == null) {
-                                    val latVal = it.toDoubleOrNull() ?: 37.7749
-                                    val lngVal = longitude.toDoubleOrNull() ?: -122.4194
-                                    mapShareLink = "https://www.google.com/maps/search/?api=1&query=$latVal,$lngVal"
-                                }
-                            },
-                            label = { Text("Latitude") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("cafe_lat_input")
-                        )
-                        OutlinedTextField(
-                            value = longitude,
-                            onValueChange = { 
-                                longitude = it
-                                // Auto-assign share link if customized
-                                if (mapShareLink == null) {
-                                    val latVal = latitude.toDoubleOrNull() ?: 37.7749
-                                    val lngVal = it.toDoubleOrNull() ?: -122.4194
-                                    mapShareLink = "https://www.google.com/maps/search/?api=1&query=$latVal,$lngVal"
-                                }
-                            },
-                            label = { Text("Longitude") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("cafe_lng_input")
-                        )
-                    }
-                }
-            }
 
             // Ratings Area
             Card(
