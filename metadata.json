@@ -1,5 +1,5 @@
 {
-  "name": "Cafe Diary",
+  "name": "Cafe Diary v1.1.0",
   "description": "A highly polished diary app to log and rate visited cafes, coffee quality, atmosphere, upload photos, and view your cafe logs on an interactive map.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

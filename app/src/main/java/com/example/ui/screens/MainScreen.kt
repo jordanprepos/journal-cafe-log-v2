@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -25,6 +28,7 @@ sealed class TabScreen(val route: String, val title: String, val icon: androidx.
     object Profile : TabScreen("profile", "Profile", Icons.Default.Person)
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainScreen(
     cafeViewModel: CafeViewModel,
@@ -37,72 +41,83 @@ fun MainScreen(
     val cafes by cafeViewModel.allCafes.collectAsState()
     var showRecap by remember { mutableStateOf(false) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.background,
-                modifier = Modifier.testTag("bottom_nav_bar")
-            ) {
-                val items = listOf(TabScreen.Journal, TabScreen.Stats, TabScreen.Places, TabScreen.Profile)
-                items.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(imageVector = screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        selected = currentTab.route == screen.route,
-                        onClick = { currentTab = screen },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                        ),
-                        modifier = Modifier.testTag("nav_item_${screen.route}")
-                    )
+    SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = selectedCafe,
+            label = "cafe_details_transition",
+            modifier = Modifier.fillMaxSize()
+        ) { targetCafe ->
+            if (targetCafe == null) {
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    bottomBar = {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            modifier = Modifier.testTag("bottom_nav_bar")
+                        ) {
+                            val items = listOf(TabScreen.Journal, TabScreen.Stats, TabScreen.Places, TabScreen.Profile)
+                            items.forEach { screen ->
+                                NavigationBarItem(
+                                    icon = { Icon(imageVector = screen.icon, contentDescription = screen.title) },
+                                    label = { Text(screen.title) },
+                                    selected = currentTab.route == screen.route,
+                                    onClick = { currentTab = screen },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_${screen.route}")
+                                )
+                            }
+                        }
+                    }
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) {
+                        when (currentTab) {
+                            TabScreen.Journal -> {
+                                DashboardScreen(
+                                    cafeViewModel = cafeViewModel,
+                                    authViewModel = authViewModel,
+                                    onNavigateToAddCafe = onNavigateToAddCafe,
+                                    onShowRecap = { showRecap = true },
+                                    sharedTransitionScope = this@SharedTransitionLayout,
+                                    animatedVisibilityScope = this@AnimatedContent
+                                )
+                            }
+                            TabScreen.Stats -> {
+                                StatsScreen(
+                                    cafeViewModel = cafeViewModel
+                                )
+                            }
+                            TabScreen.Places -> {
+                                PlacesScreen(
+                                    cafeViewModel = cafeViewModel
+                                )
+                            }
+                            TabScreen.Profile -> {
+                                ProfileScreen(
+                                    authViewModel = authViewModel,
+                                    cafeViewModel = cafeViewModel,
+                                    onShowRecap = { showRecap = true }
+                                )
+                            }
+                        }
+                    }
                 }
+            } else {
+                CafeDetailsView(
+                    cafe = targetCafe,
+                    onDismiss = { cafeViewModel.selectCafe(null) },
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedContent
+                )
             }
         }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when (currentTab) {
-                TabScreen.Journal -> {
-                    DashboardScreen(
-                        cafeViewModel = cafeViewModel,
-                        authViewModel = authViewModel,
-                        onNavigateToAddCafe = onNavigateToAddCafe,
-                        onShowRecap = { showRecap = true }
-                    )
-                }
-                TabScreen.Stats -> {
-                    StatsScreen(
-                        cafeViewModel = cafeViewModel
-                    )
-                }
-                TabScreen.Places -> {
-                    PlacesScreen(
-                        cafeViewModel = cafeViewModel
-                    )
-                }
-                TabScreen.Profile -> {
-                    ProfileScreen(
-                        authViewModel = authViewModel,
-                        cafeViewModel = cafeViewModel,
-                        onShowRecap = { showRecap = true }
-                    )
-                }
-            }
-        }
-    }
-
-    // Universal details overlay overlaying any tab screen
-    selectedCafe?.let { cafe ->
-        CafeDetailsDialog(
-            cafe = cafe,
-            onDismiss = { cafeViewModel.selectCafe(null) }
-        )
     }
 
     // Year-in-Café Recap overlay dialog

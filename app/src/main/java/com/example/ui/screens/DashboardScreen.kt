@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,14 +47,16 @@ enum class SortOption {
     HIGHEST_RATING
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun DashboardScreen(
     cafeViewModel: CafeViewModel,
     authViewModel: AuthViewModel,
     onNavigateToAddCafe: () -> Unit,
     onShowRecap: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val cafes by cafeViewModel.allCafes.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
@@ -61,21 +66,30 @@ fun DashboardScreen(
 
     // Dynamic Tag Aggregation
     val availableTags = remember(cafes) {
-        val tagsSet = mutableSetOf<String>()
+        val presets = listOf(
+            "Work-friendly", "Date Night", "Coffee Roastery", "Smokers Friendly",
+            "Non Smokers Only", "Free Wi-Fi", "No Wifi", "Instagram-able"
+        )
+        val tagsSet = LinkedHashSet<String>()
+        // Always include the core predefined tags first
+        tagsSet.addAll(presets)
+        
+        // Then add other unique custom tags found in any of the logged cafes
         cafes.forEach { cafe ->
             cafe.tags?.split(";")?.forEach { tag ->
                 val trimmed = tag.trim()
                 if (trimmed.isNotEmpty()) {
-                    tagsSet.add(trimmed)
+                    // Try to match preset tag casing if possible to keep it unified
+                    val matchedPreset = presets.firstOrNull { it.equals(trimmed, ignoreCase = true) }
+                    if (matchedPreset != null) {
+                        tagsSet.add(matchedPreset)
+                    } else {
+                        tagsSet.add(trimmed)
+                    }
                 }
             }
         }
-        // Fallback default tags if empty
-        if (tagsSet.isEmpty()) {
-            listOf("All", "espresso bar", "cosy", "work-friendly")
-        } else {
-            listOf("All") + tagsSet.toList()
-        }
+        listOf("All") + tagsSet.toList()
     }
 
     // Filtered & Sorted Cafes
@@ -133,14 +147,35 @@ fun DashboardScreen(
                     .fillMaxWidth()
                     .padding(top = 24.dp, bottom = 8.dp, start = 24.dp, end = 24.dp)
             ) {
-                Text(
-                    text = "YOUR CAFÉ DIARY",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        letterSpacing = 1.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "YOUR CAFÉ DIARY",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            letterSpacing = 1.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        )
                     )
-                )
+                    
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    ) {
+                        Text(
+                            text = "v1.1.0",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
                 
                 Text(
                     text = "Journal",
@@ -343,7 +378,9 @@ fun DashboardScreen(
                         JournalCafeCard(
                             cafe = cafe,
                             onClick = { cafeViewModel.selectCafe(cafe) },
-                            onDelete = { cafeToDelete = cafe }
+                            onDelete = { cafeToDelete = cafe },
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope
                         )
                     }
                 }
@@ -376,19 +413,56 @@ fun DashboardScreen(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun JournalCafeCard(
     cafe: CafeEntity,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val formatter = remember { SimpleDateFormat("MMM d • h:mm a", Locale.getDefault()) }
     val formattedDate = remember(cafe.timestamp) { formatter.format(Date(cafe.timestamp)) }
 
+    val cardModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                rememberSharedContentState(key = "card-${cafe.id}"),
+                animatedVisibilityScope = animatedVisibilityScope
+            )
+        }
+    } else {
+        Modifier
+    }
+
+    val photoModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedElement(
+                rememberSharedContentState(key = "photo-${cafe.id}"),
+                animatedVisibilityScope = animatedVisibilityScope
+            )
+        }
+    } else {
+        Modifier
+    }
+
+    val textModifier = if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+        with(sharedTransitionScope) {
+            Modifier.sharedBounds(
+                rememberSharedContentState(key = "name-${cafe.id}"),
+                animatedVisibilityScope = animatedVisibilityScope
+            )
+        }
+    } else {
+        Modifier
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .then(cardModifier)
             .clickable { onClick() }
             .testTag("cafe_card_${cafe.id}"),
         shape = RoundedCornerShape(16.dp),
@@ -404,6 +478,7 @@ fun JournalCafeCard(
             Box(
                 modifier = Modifier
                     .size(90.dp)
+                    .then(photoModifier)
                     .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFFE8DFD4)),
                 contentAlignment = Alignment.Center
@@ -461,7 +536,9 @@ fun JournalCafeCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(textModifier)
                     )
                     
                     IconButton(

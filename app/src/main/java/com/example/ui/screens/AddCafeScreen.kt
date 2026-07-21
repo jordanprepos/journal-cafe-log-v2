@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,6 +52,11 @@ import java.net.URL
 import java.net.URLDecoder
 import com.example.ui.CafeViewModel
 import kotlin.random.Random
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+
 
 data class PresetLocation(
     val name: String,
@@ -105,19 +111,19 @@ fun AddCafeScreen(
         }
     }
     
-    // Preset SF roasting hotspot locations with real coordinates and simulated share links
+    // Preset SF roasting hotspot locations with real coordinates and valid search query links
     val presetLocations = remember {
         listOf(
-            PresetLocation("Blue Bottle Coffee - Mint Plaza", "66 Mint St, San Francisco, CA 94103", 37.7825, -122.4080, "https://maps.app.goo.gl/bluebottle_mint"),
-            PresetLocation("Ritual Coffee Roasters - Valencia", "1026 Valencia St, San Francisco, CA 94110", 37.7564, -122.4214, "https://maps.app.goo.gl/ritual_valencia"),
-            PresetLocation("Sightglass Coffee - SOMA", "270 7th St, San Francisco, CA 94103", 37.7770, -122.4084, "https://maps.app.goo.gl/sightglass_7th"),
-            PresetLocation("Four Barrel Coffee - Mission", "375 Valencia St, San Francisco, CA 94103", 37.7670, -122.4219, "https://maps.app.goo.gl/fourbarrel_valencia"),
-            PresetLocation("Philz Coffee - 24th Street", "3101 24th St, San Francisco, CA 94110", 37.7524, -122.4143, "https://maps.app.goo.gl/philz_24th"),
-            PresetLocation("Sextant Coffee Roasters - Folsom", "1415 Folsom St, San Francisco, CA 94103", 37.7725, -122.4116, "https://maps.app.goo.gl/sextant_folsom"),
-            PresetLocation("Andytown Coffee Roasters - Lawton", "3655 Lawton St, San Francisco, CA 94122", 37.7578, -122.5023, "https://maps.app.goo.gl/andytown_lawton"),
-            PresetLocation("Saint Frank Coffee - Russian Hill", "2340 Polk St, San Francisco, CA 94109", 37.7996, -122.4223, "https://maps.app.goo.gl/saintfrank_polk"),
-            PresetLocation("Flywheel Coffee Roasters - Golden Gate", "672 Stanyan St, San Francisco, CA 94117", 37.7691, -122.4526, "https://maps.app.goo.gl/flywheel_stanyan"),
-            PresetLocation("Verve Coffee Roasters - Castro", "2101 Market St, San Francisco, CA 94114", 37.7668, -122.4294, "https://maps.app.goo.gl/verve_market")
+            PresetLocation("Blue Bottle Coffee - Mint Plaza", "66 Mint St, San Francisco, CA 94103", 37.7825, -122.4080, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Blue Bottle Coffee - Mint Plaza, 66 Mint St, San Francisco, CA 94103")}"),
+            PresetLocation("Ritual Coffee Roasters - Valencia", "1026 Valencia St, San Francisco, CA 94110", 37.7564, -122.4214, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Ritual Coffee Roasters - Valencia, 1026 Valencia St, San Francisco, CA 94110")}"),
+            PresetLocation("Sightglass Coffee - SOMA", "270 7th St, San Francisco, CA 94103", 37.7770, -122.4084, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Sightglass Coffee - SOMA, 270 7th St, San Francisco, CA 94103")}"),
+            PresetLocation("Four Barrel Coffee - Mission", "375 Valencia St, San Francisco, CA 94103", 37.7670, -122.4219, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Four Barrel Coffee - Mission, 375 Valencia St, San Francisco, CA 94103")}"),
+            PresetLocation("Philz Coffee - 24th Street", "3101 24th St, San Francisco, CA 94110", 37.7524, -122.4143, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Philz Coffee - 24th Street, 3101 24th St, San Francisco, CA 94110")}"),
+            PresetLocation("Sextant Coffee Roasters - Folsom", "1415 Folsom St, San Francisco, CA 94103", 37.7725, -122.4116, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Sextant Coffee Roasters - Folsom, 1415 Folsom St, San Francisco, CA 94103")}"),
+            PresetLocation("Andytown Coffee Roasters - Lawton", "3655 Lawton St, San Francisco, CA 94122", 37.7578, -122.5023, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Andytown Coffee Roasters - Lawton, 3655 Lawton St, San Francisco, CA 94122")}"),
+            PresetLocation("Saint Frank Coffee - Russian Hill", "2340 Polk St, San Francisco, CA 94109", 37.7996, -122.4223, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Saint Frank Coffee - Russian Hill, 2340 Polk St, San Francisco, CA 94109")}"),
+            PresetLocation("Flywheel Coffee Roasters - Golden Gate", "672 Stanyan St, San Francisco, CA 94117", 37.7691, -122.4526, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Flywheel Coffee Roasters - Golden Gate, 672 Stanyan St, San Francisco, CA 94117")}"),
+            PresetLocation("Verve Coffee Roasters - Castro", "2101 Market St, San Francisco, CA 94114", 37.7668, -122.4294, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Verve Coffee Roasters - Castro, 2101 Market St, San Francisco, CA 94114")}")
         )
     }
 
@@ -716,77 +722,42 @@ fun AddCafeScreen(
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
                         text = "Experience Rating",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Overall Star rating selection
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Overall Experience:", modifier = Modifier.width(120.dp), style = MaterialTheme.typography.bodyMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            repeat(5) { index ->
-                                val starIndex = index + 1
-                                Icon(
-                                    imageVector = if (starIndex <= rating) Icons.Default.Star else Icons.Default.StarBorder,
-                                    contentDescription = "$starIndex Stars",
-                                    tint = if (starIndex <= rating) Color(0xFFE07A5F) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clickable { rating = starIndex }
-                                        .testTag("star_overall_$starIndex")
-                                )
-                            }
-                        }
-                    }
+                    InteractiveStarRating(
+                        rating = rating,
+                        onRatingChanged = { rating = it },
+                        label = "Overall Experience",
+                        testTagPrefix = "star_overall",
+                        activeColor = Color(0xFFE07A5F)
+                    )
 
-                    // Coffee Quality selection
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Coffee Quality:", modifier = Modifier.width(120.dp), style = MaterialTheme.typography.bodyMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            repeat(5) { index ->
-                                val starIndex = index + 1
-                                Icon(
-                                    imageVector = if (starIndex <= coffeeQualityRating) Icons.Default.Coffee else Icons.Default.Coffee,
-                                    contentDescription = "$starIndex Coffee Beans",
-                                    tint = if (starIndex <= coffeeQualityRating) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clickable { coffeeQualityRating = starIndex }
-                                        .testTag("star_coffee_$starIndex")
-                                )
-                            }
-                        }
-                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 
-                    // Atmosphere quality selection
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Atmosphere:", modifier = Modifier.width(120.dp), style = MaterialTheme.typography.bodyMedium)
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            repeat(5) { index ->
-                                val starIndex = index + 1
-                                Icon(
-                                    imageVector = if (starIndex <= atmosphereRating) Icons.Default.WbSunny else Icons.Default.WbSunny,
-                                    contentDescription = "$starIndex Atmosphere Suns",
-                                    tint = if (starIndex <= atmosphereRating) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clickable { atmosphereRating = starIndex }
-                                        .testTag("star_atmosphere_$starIndex")
-                                )
-                            }
-                        }
-                    }
+                    InteractiveStarRating(
+                        rating = coffeeQualityRating,
+                        onRatingChanged = { coffeeQualityRating = it },
+                        label = "Coffee Quality",
+                        testTagPrefix = "star_coffee",
+                        activeColor = MaterialTheme.colorScheme.primary
+                    )
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+
+                    InteractiveStarRating(
+                        rating = atmosphereRating,
+                        onRatingChanged = { atmosphereRating = it },
+                        label = "Atmosphere",
+                        testTagPrefix = "star_atmosphere",
+                        activeColor = MaterialTheme.colorScheme.tertiary
+                    )
                 }
             }
 
@@ -914,18 +885,91 @@ fun AddCafeScreen(
                     .testTag("cafe_favorite_drink_input")
             )
 
-            // Diary Tags Section (semicolon-separated)
-            OutlinedTextField(
-                value = tags,
-                onValueChange = { tags = it },
-                label = { Text("Diary Tags (separated by semicolons)") },
-                placeholder = { Text("e.g. cosy;work-friendly;roastery") },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("cafe_tags_input")
-            )
+            // Diary Tags Section with Preset Chips Selection
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Select Tags",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
+                val presetTags = listOf(
+                    "Work-friendly", "Date Night", "Coffee Roastery", "Smokers Friendly",
+                    "Non Smokers Only", "Free Wi-Fi", "No Wifi", "Instagram-able"
+                )
+                
+                val currentTagList = remember(tags) {
+                    tags.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    presetTags.forEach { presetTag ->
+                        val isSelected = currentTagList.any { it.equals(presetTag, ignoreCase = true) }
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable {
+                                    val updatedList = if (isSelected) {
+                                        currentTagList.filter { !it.equals(presetTag, ignoreCase = true) }
+                                    } else {
+                                        currentTagList + presetTag
+                                    }
+                                    tags = updatedList.joinToString("; ")
+                                }
+                                .testTag("tag_chip_$presetTag")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                Text(
+                                    text = presetTag,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = tags,
+                    onValueChange = { tags = it },
+                    label = { Text("Diary Tags (separated by semicolons)") },
+                    placeholder = { Text("e.g. cosy;work-friendly;roastery") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("cafe_tags_input")
+                )
+            }
 
             // Notes Section (Roasting / Quality / Atmosphere notes)
             OutlinedTextField(
@@ -1297,7 +1341,8 @@ fun parseNominatimResponse(jsonString: String): List<PresetLocation> {
                 displayName
             }
             
-            val shareLink = "https://www.google.com/maps/search/?api=1&query=${lat},${lon}"
+            val queryText = "$name, $address"
+            val shareLink = "https://www.google.com/maps/search/?api=1&query=${java.net.URLEncoder.encode(queryText, "UTF-8")}"
             list.add(PresetLocation(name, address, lat, lon, shareLink))
         }
     } catch (e: Exception) {
@@ -1311,7 +1356,7 @@ suspend fun searchLocationsOnline(query: String): List<PresetLocation> {
         var conn: HttpURLConnection? = null
         try {
             val encodedQuery = java.net.URLEncoder.encode(query, "UTF-8")
-            val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=5&addressdetails=1"
+            val urlString = "https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&limit=5&addressdetails=1&countrycodes=id"
             val url = URL(urlString)
             conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = 6000
@@ -1333,4 +1378,101 @@ suspend fun searchLocationsOnline(query: String): List<PresetLocation> {
         }
     }
 }
+
+@Composable
+fun InteractiveStarRating(
+    rating: Int,
+    onRatingChanged: (Int) -> Unit,
+    label: String,
+    testTagPrefix: String,
+    modifier: Modifier = Modifier,
+    activeColor: Color = Color(0xFFE07A5F),
+    inactiveColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
+) {
+    val ratingDescription = when (rating) {
+        1 -> "Poor"
+        2 -> "Fair"
+        3 -> "Average"
+        4 -> "Good"
+        5 -> "Excellent"
+        else -> ""
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = if (rating > 0) "$rating/5 ($ratingDescription)" else "Not Rated",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (rating > 0) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            repeat(5) { index ->
+                val starIndex = index + 1
+                val isSelected = starIndex <= rating
+                
+                var isPressed by remember { mutableStateOf(false) }
+                val scale by animateFloatAsState(
+                    targetValue = if (isPressed) 1.25f else 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "star_scale"
+                )
+
+                LaunchedEffect(isPressed) {
+                    if (isPressed) {
+                        delay(100)
+                        isPressed = false
+                    }
+                }
+
+                IconButton(
+                    onClick = {
+                        isPressed = true
+                        onRatingChanged(starIndex)
+                    },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("${testTagPrefix}_$starIndex")
+                ) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = "Rate $starIndex stars out of 5",
+                        tint = if (isSelected) activeColor else inactiveColor,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
 
