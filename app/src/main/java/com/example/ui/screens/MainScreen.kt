@@ -13,9 +13,16 @@ import androidx.compose.ui.platform.testTag
 import com.example.auth.AuthViewModel
 import com.example.ui.CafeViewModel
 
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.ListAlt
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
+
 sealed class TabScreen(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    object Feed : TabScreen("feed", "Cafe Feed", Icons.Default.ListAlt)
-    object Map : TabScreen("map", "Cafe Map", Icons.Default.Map)
+    object Journal : TabScreen("journal", "Journal", Icons.Default.ListAlt)
+    object Stats : TabScreen("stats", "Stats", Icons.Default.BarChart)
+    object Places : TabScreen("places", "Places", Icons.Default.Map)
+    object Profile : TabScreen("profile", "Profile", Icons.Default.Person)
 }
 
 @Composable
@@ -25,8 +32,10 @@ fun MainScreen(
     onNavigateToAddCafe: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var currentTab by remember { mutableStateOf<TabScreen>(TabScreen.Feed) }
+    var currentTab by remember { mutableStateOf<TabScreen>(TabScreen.Journal) }
     val selectedCafe by cafeViewModel.selectedCafe.collectAsState()
+    val cafes by cafeViewModel.allCafes.collectAsState()
+    var showRecap by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -35,7 +44,7 @@ fun MainScreen(
                 containerColor = MaterialTheme.colorScheme.background,
                 modifier = Modifier.testTag("bottom_nav_bar")
             ) {
-                val items = listOf(TabScreen.Feed, TabScreen.Map)
+                val items = listOf(TabScreen.Journal, TabScreen.Stats, TabScreen.Places, TabScreen.Profile)
                 items.forEach { screen ->
                     NavigationBarItem(
                         icon = { Icon(imageVector = screen.icon, contentDescription = screen.title) },
@@ -59,16 +68,29 @@ fun MainScreen(
                 .padding(innerPadding)
         ) {
             when (currentTab) {
-                TabScreen.Feed -> {
+                TabScreen.Journal -> {
                     DashboardScreen(
                         cafeViewModel = cafeViewModel,
                         authViewModel = authViewModel,
-                        onNavigateToAddCafe = onNavigateToAddCafe
+                        onNavigateToAddCafe = onNavigateToAddCafe,
+                        onShowRecap = { showRecap = true }
                     )
                 }
-                TabScreen.Map -> {
-                    MapScreen(
+                TabScreen.Stats -> {
+                    StatsScreen(
                         cafeViewModel = cafeViewModel
+                    )
+                }
+                TabScreen.Places -> {
+                    PlacesScreen(
+                        cafeViewModel = cafeViewModel
+                    )
+                }
+                TabScreen.Profile -> {
+                    ProfileScreen(
+                        authViewModel = authViewModel,
+                        cafeViewModel = cafeViewModel,
+                        onShowRecap = { showRecap = true }
                     )
                 }
             }
@@ -80,6 +102,14 @@ fun MainScreen(
         CafeDetailsDialog(
             cafe = cafe,
             onDismiss = { cafeViewModel.selectCafe(null) }
+        )
+    }
+
+    // Year-in-Café Recap overlay dialog
+    if (showRecap) {
+        YearInCafeRecapDialog(
+            cafes = cafes,
+            onDismiss = { showRecap = false }
         )
     }
 }

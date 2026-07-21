@@ -51,7 +51,9 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
         atmosphereRating: Int,
         notes: String,
         selectedPhotoUris: List<Uri>,
-        mapShareLink: String? = null
+        mapShareLink: String? = null,
+        tags: String? = null,
+        favoriteDrink: String? = null
     ) {
         viewModelScope.launch {
             try {
@@ -81,7 +83,9 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
                     notes = notes,
                     photoUri = primaryPhoto,
                     photoUris = secondaryPhotos,
-                    mapShareLink = mapShareLink
+                    mapShareLink = mapShareLink,
+                    tags = tags,
+                    favoriteDrink = favoriteDrink
                 )
 
                 repository.insertCafe(newCafe)

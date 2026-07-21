@@ -17,5 +17,7 @@ data class CafeEntity(
     val photoUri: String?, // Primary photo URI
     val photoUris: String? = null, // Semicolon-separated secondary photo URIs if any
     val mapShareLink: String? = null, // Google Maps share link
+    val tags: String? = null, // Semicolon-separated tags (e.g. "work-friendly;cosy;espresso bar")
+    val favoriteDrink: String? = null, // Favorite drink name (e.g. "Iced oat latte")
     val timestamp: Long = System.currentTimeMillis()
 )

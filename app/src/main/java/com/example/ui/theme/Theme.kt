@@ -12,28 +12,28 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme =
   darkColorScheme(
-    primary = SleekDarkPrimary,
-    secondary = SleekDarkSecondary,
-    tertiary = SleekDarkTertiary,
-    background = SleekDarkBackground,
-    surface = SleekDarkSurface,
-    onPrimary = SleekDarkOnPrimary,
-    onSecondary = SleekDarkOnSecondary,
-    onBackground = SleekDarkOnBackground,
-    onSurface = SleekDarkOnSurface
+    primary = EarthyDarkPrimary,
+    secondary = EarthyDarkSecondary,
+    tertiary = EarthyDarkTertiary,
+    background = EarthyDarkBackground,
+    surface = EarthyDarkSurface,
+    onPrimary = EarthyDarkOnPrimary,
+    onSecondary = EarthyDarkOnSecondary,
+    onBackground = EarthyDarkOnBackground,
+    onSurface = EarthyDarkOnSurface
   )
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = SleekPrimary,
-    secondary = SleekSecondary,
-    tertiary = SleekTertiary,
-    background = SleekBackground,
-    surface = SleekSurface,
-    onPrimary = SleekOnPrimary,
-    onSecondary = SleekOnSecondary,
-    onBackground = SleekOnBackground,
-    onSurface = SleekOnSurface
+    primary = EarthyPrimary,
+    secondary = EarthySecondary,
+    tertiary = EarthyTertiary,
+    background = EarthyBackground,
+    surface = EarthySurface,
+    onPrimary = EarthyOnPrimary,
+    onSecondary = EarthyOnSecondary,
+    onBackground = EarthyOnBackground,
+    onSurface = EarthyOnSurface
   )
 
 @Composable

@@ -60,15 +60,18 @@ fun AppNavigation(
     val navController = rememberNavController()
     val user by authViewModel.userState.collectAsState()
 
-    // Dynamically react to authentication changes
+    // Dynamically react to authentication changes safely
     LaunchedEffect(user) {
-        if (user == null) {
-            navController.navigate("login") {
-                popUpTo(0) { inclusive = true }
-            }
-        } else {
-            navController.navigate("main") {
-                popUpTo(0) { inclusive = true }
+        val currentRoute = navController.currentDestination?.route
+        if (currentRoute != null) {
+            if (user == null && currentRoute != "login") {
+                navController.navigate("login") {
+                    popUpTo(currentRoute) { inclusive = true }
+                }
+            } else if (user != null && currentRoute != "main") {
+                navController.navigate("main") {
+                    popUpTo(currentRoute) { inclusive = true }
+                }
             }
         }
     }

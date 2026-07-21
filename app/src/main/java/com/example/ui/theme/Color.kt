@@ -2,27 +2,27 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Sleek Interface Light Palette
-val SleekPrimary = Color(0xFF6750A4)         // Elegant Royal Purple
-val SleekSecondary = Color(0xFF625B71)       // Soft Charcoal Lavender
-val SleekTertiary = Color(0xFF7D5260)        // Muted Rose Plum
-val SleekBackground = Color(0xFFFFFBFF)      // Pristine Crisp light background
-val SleekSurface = Color(0xFFF7F2FA)         // High-contrast clean card background
-val SleekOnPrimary = Color(0xFFFFFFFF)       // Crisp white text on primary
-val SleekOnSecondary = Color(0xFFFFFFFF)     // Crisp white text on secondary
-val SleekOnBackground = Color(0xFF1D1B20)    // Charcoal black text
-val SleekOnSurface = Color(0xFF1D1B20)       // Charcoal black surface text
-val SleekContainerPrimary = Color(0xFFEADDFF) // Warm lavender accent tag container
-val SleekOnContainerPrimary = Color(0xFF21005D)// Extremely rich deep violet
+// Warm-earthy Editorial light palette
+val EarthyPrimary = Color(0xFFA94420)        // Burnt Terracotta / Rich Orange
+val EarthySecondary = Color(0xFF5D4037)      // Warm Roasted Coffee Brown
+val EarthyTertiary = Color(0xFF8D6E63)       // Soft Milk Chocolate Brown
+val EarthyBackground = Color(0xFFF7F4EF)     // Clean Warm Cream Background
+val EarthySurface = Color(0xFFFFFFFF)        // Pristine White for elegant cards
+val EarthyOnPrimary = Color(0xFFFFFFFF)      // White text on terracotta
+val EarthyOnSecondary = Color(0xFFFFFFFF)    // White text on coffee brown
+val EarthyOnBackground = Color(0xFF2E221C)   // Deep Dark Espresso for text
+val EarthyOnSurface = Color(0xFF2E221C)      // Deep Dark Espresso on surface
+val EarthyContainerPrimary = Color(0xFFFBEBE4)// Light Peach / Terracotta accent tint
+val EarthyOnContainerPrimary = Color(0xFF5A1A05)// Rich deep red-brown
 
-// Sleek Interface Dark Palette
-val SleekDarkPrimary = Color(0xFFD0BCFF)     // Soft light pastel lavender
-val SleekDarkSecondary = Color(0xFFCCC2DC)   // Soft slate lavender
-val SleekDarkTertiary = Color(0xFFEFB8C8)    // Soft rose plum
-val SleekDarkBackground = Color(0xFF141218)  // Obsidian cosmic black
-val SleekDarkSurface = Color(0xFF211F26)     // High-density space grey
-val SleekDarkOnPrimary = Color(0xFF381E72)   // Deep violet text on pastel primary
-val SleekDarkOnSecondary = Color(0xFF332D41) // Dark lavender text
-val SleekDarkOnBackground = Color(0xFFE6E1E5)// Crisp light grey text
-val SleekDarkOnSurface = Color(0xFFE6E1E5)   // Crisp light grey surface text
+// Dark theme earthy option
+val EarthyDarkPrimary = Color(0xFFE57F58)    // Soft Terracotta Peach
+val EarthyDarkSecondary = Color(0xFFD7CCC8)  // Pale Creamy Coffee
+val EarthyDarkTertiary = Color(0xFFBCAAA4)   // Pale Cocoa
+val EarthyDarkBackground = Color(0xFF1D1613) // Dark Roasted Bean Background
+val EarthyDarkSurface = Color(0xFF2B211D)    // Dark Espresso Card Background
+val EarthyDarkOnPrimary = Color(0xFF4E1500)  // Dark Maroon text
+val EarthyDarkOnSecondary = Color(0xFF3E2723)// Extra Dark Brown text
+val EarthyDarkOnBackground = Color(0xFFECE0DB)// Soft warm cream text
+val EarthyDarkOnSurface = Color(0xFFECE0DB)  // Soft warm cream text
 

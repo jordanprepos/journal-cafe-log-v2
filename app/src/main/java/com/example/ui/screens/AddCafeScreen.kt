@@ -73,6 +73,8 @@ fun AddCafeScreen(
     var name by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var mapShareLink by remember { mutableStateOf<String?>(null) }
+    var tags by remember { mutableStateOf("") }
+    var favoriteDrink by remember { mutableStateOf("") }
     var isSuggestionsExpanded by remember { mutableStateOf(false) }
     var isParsingUrl by remember { mutableStateOf(false) }
     var parseError by remember { mutableStateOf<String?>(null) }
@@ -899,6 +901,32 @@ fun AddCafeScreen(
                 }
             }
 
+            // Favorite Drink Section
+            OutlinedTextField(
+                value = favoriteDrink,
+                onValueChange = { favoriteDrink = it },
+                label = { Text("Favorite Drink Name") },
+                placeholder = { Text("e.g. Iced oat latte, Espresso, Pour over...") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("cafe_favorite_drink_input")
+            )
+
+            // Diary Tags Section (semicolon-separated)
+            OutlinedTextField(
+                value = tags,
+                onValueChange = { tags = it },
+                label = { Text("Diary Tags (separated by semicolons)") },
+                placeholder = { Text("e.g. cosy;work-friendly;roastery") },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("cafe_tags_input")
+            )
+
             // Notes Section (Roasting / Quality / Atmosphere notes)
             OutlinedTextField(
                 value = notes,
@@ -930,7 +958,9 @@ fun AddCafeScreen(
                         atmosphereRating = atmosphereRating,
                         notes = notes,
                         selectedPhotoUris = selectedPhotos.toList(),
-                        mapShareLink = mapShareLink ?: "https://www.google.com/maps/search/?api=1&query=${Uri.encode(name + " " + address)}"
+                        mapShareLink = mapShareLink ?: "https://www.google.com/maps/search/?api=1&query=${Uri.encode(name + " " + address)}",
+                        tags = tags.ifBlank { null },
+                        favoriteDrink = favoriteDrink.ifBlank { null }
                     )
                 },
                 enabled = name.isNotBlank(),
