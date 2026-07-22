@@ -83,52 +83,11 @@ fun AddCafeScreen(
     var address by remember { mutableStateOf("") }
     var mapShareLink by remember { mutableStateOf<String?>(null) }
     var tags by remember { mutableStateOf("") }
+    var facilities by remember { mutableStateOf("") }
     var favoriteDrink by remember { mutableStateOf("") }
-    var isSuggestionsExpanded by remember { mutableStateOf(false) }
     var isParsingUrl by remember { mutableStateOf(false) }
     var parseError by remember { mutableStateOf<String?>(null) }
     val coroutineScope = rememberCoroutineScope()
-
-    var isSearchingOnline by remember { mutableStateOf(false) }
-    var onlineSuggestions by remember { mutableStateOf<List<PresetLocation>>(emptyList()) }
-
-    // Trigger online location search with debounce
-    LaunchedEffect(name) {
-        val trimmed = name.trim()
-        if (trimmed.isBlank() || trimmed.startsWith("http") || trimmed.contains("maps.google") || trimmed.contains("maps.app.goo") || trimmed.contains("goo.gl/maps")) {
-            onlineSuggestions = emptyList()
-            return@LaunchedEffect
-        }
-        
-        // Wait 600ms to debounce keystrokes
-        delay(600)
-        
-        isSearchingOnline = true
-        try {
-            val results = searchLocationsOnline(trimmed)
-            onlineSuggestions = results
-        } catch (e: Exception) {
-            onlineSuggestions = emptyList()
-        } finally {
-            isSearchingOnline = false
-        }
-    }
-    
-    // Preset SF roasting hotspot locations with real coordinates and valid search query links
-    val presetLocations = remember {
-        listOf(
-            PresetLocation("Blue Bottle Coffee - Mint Plaza", "66 Mint St, San Francisco, CA 94103", 37.7825, -122.4080, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Blue Bottle Coffee - Mint Plaza, 66 Mint St, San Francisco, CA 94103")}"),
-            PresetLocation("Ritual Coffee Roasters - Valencia", "1026 Valencia St, San Francisco, CA 94110", 37.7564, -122.4214, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Ritual Coffee Roasters - Valencia, 1026 Valencia St, San Francisco, CA 94110")}"),
-            PresetLocation("Sightglass Coffee - SOMA", "270 7th St, San Francisco, CA 94103", 37.7770, -122.4084, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Sightglass Coffee - SOMA, 270 7th St, San Francisco, CA 94103")}"),
-            PresetLocation("Four Barrel Coffee - Mission", "375 Valencia St, San Francisco, CA 94103", 37.7670, -122.4219, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Four Barrel Coffee - Mission, 375 Valencia St, San Francisco, CA 94103")}"),
-            PresetLocation("Philz Coffee - 24th Street", "3101 24th St, San Francisco, CA 94110", 37.7524, -122.4143, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Philz Coffee - 24th Street, 3101 24th St, San Francisco, CA 94110")}"),
-            PresetLocation("Sextant Coffee Roasters - Folsom", "1415 Folsom St, San Francisco, CA 94103", 37.7725, -122.4116, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Sextant Coffee Roasters - Folsom, 1415 Folsom St, San Francisco, CA 94103")}"),
-            PresetLocation("Andytown Coffee Roasters - Lawton", "3655 Lawton St, San Francisco, CA 94122", 37.7578, -122.5023, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Andytown Coffee Roasters - Lawton, 3655 Lawton St, San Francisco, CA 94122")}"),
-            PresetLocation("Saint Frank Coffee - Russian Hill", "2340 Polk St, San Francisco, CA 94109", 37.7996, -122.4223, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Saint Frank Coffee - Russian Hill, 2340 Polk St, San Francisco, CA 94109")}"),
-            PresetLocation("Flywheel Coffee Roasters - Golden Gate", "672 Stanyan St, San Francisco, CA 94117", 37.7691, -122.4526, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Flywheel Coffee Roasters - Golden Gate, 672 Stanyan St, San Francisco, CA 94117")}"),
-            PresetLocation("Verve Coffee Roasters - Castro", "2101 Market St, San Francisco, CA 94114", 37.7668, -122.4294, "https://www.google.com/maps/search/?api=1&query=${Uri.encode("Verve Coffee Roasters - Castro, 2101 Market St, San Francisco, CA 94114")}")
-        )
-    }
 
     var latitude by remember { mutableStateOf("37.7749") }
     var longitude by remember { mutableStateOf("-122.4194") }
@@ -150,6 +109,7 @@ fun AddCafeScreen(
             address = editingCafe!!.address
             mapShareLink = editingCafe!!.mapShareLink
             tags = editingCafe!!.tags ?: ""
+            facilities = editingCafe!!.facilities ?: ""
             favoriteDrink = editingCafe!!.favoriteDrink ?: ""
             latitude = String.format(java.util.Locale.US, "%.6f", editingCafe!!.latitude)
             longitude = String.format(java.util.Locale.US, "%.6f", editingCafe!!.longitude)
@@ -168,16 +128,18 @@ fun AddCafeScreen(
             val draftName = sharedPref.getString("name", "") ?: ""
             val draftAddress = sharedPref.getString("address", "") ?: ""
             val draftTags = sharedPref.getString("tags", "") ?: ""
+            val draftFacilities = sharedPref.getString("facilities", "") ?: ""
             val draftFavoriteDrink = sharedPref.getString("favoriteDrink", "") ?: ""
             val draftRating = sharedPref.getInt("rating", 5)
             val draftCoffeeQuality = sharedPref.getInt("coffeeQualityRating", 5)
             val draftAtmosphere = sharedPref.getInt("atmosphereRating", 5)
             val draftNotes = sharedPref.getString("notes", "") ?: ""
 
-            if (draftName.isNotEmpty() || draftAddress.isNotEmpty() || draftTags.isNotEmpty() || draftFavoriteDrink.isNotEmpty() || draftNotes.isNotEmpty()) {
+            if (draftName.isNotEmpty() || draftAddress.isNotEmpty() || draftTags.isNotEmpty() || draftFacilities.isNotEmpty() || draftFavoriteDrink.isNotEmpty() || draftNotes.isNotEmpty()) {
                 name = draftName
                 address = draftAddress
                 tags = draftTags
+                facilities = draftFacilities
                 favoriteDrink = draftFavoriteDrink
                 rating = draftRating
                 coffeeQualityRating = draftCoffeeQuality
@@ -188,6 +150,7 @@ fun AddCafeScreen(
                 name = ""
                 address = ""
                 tags = ""
+                facilities = ""
                 favoriteDrink = ""
                 rating = 5
                 coffeeQualityRating = 5
@@ -205,14 +168,15 @@ fun AddCafeScreen(
     }
 
     // Autosave when inputs change
-    LaunchedEffect(editingCafe, name, address, tags, favoriteDrink, rating, coffeeQualityRating, atmosphereRating, notes) {
+    LaunchedEffect(editingCafe, name, address, tags, facilities, favoriteDrink, rating, coffeeQualityRating, atmosphereRating, notes) {
         if (editingCafe == null) {
             val sharedPref = context.getSharedPreferences("cafe_draft_pref", android.content.Context.MODE_PRIVATE)
-            if (name.isNotEmpty() || address.isNotEmpty() || tags.isNotEmpty() || favoriteDrink.isNotEmpty() || notes.isNotEmpty() || rating != 5 || coffeeQualityRating != 5 || atmosphereRating != 5) {
+            if (name.isNotEmpty() || address.isNotEmpty() || tags.isNotEmpty() || facilities.isNotEmpty() || favoriteDrink.isNotEmpty() || notes.isNotEmpty() || rating != 5 || coffeeQualityRating != 5 || atmosphereRating != 5) {
                 sharedPref.edit().apply {
                     putString("name", name)
                     putString("address", address)
                     putString("tags", tags)
+                    putString("facilities", facilities)
                     putString("favoriteDrink", favoriteDrink)
                     putInt("rating", rating)
                     putInt("coffeeQualityRating", coffeeQualityRating)
@@ -318,6 +282,7 @@ fun AddCafeScreen(
                                 name = ""
                                 address = ""
                                 tags = ""
+                                facilities = ""
                                 favoriteDrink = ""
                                 rating = 5
                                 coffeeQualityRating = 5
@@ -336,7 +301,7 @@ fun AddCafeScreen(
                 }
             }
 
-            // Cafe Name & Location Input with Autocomplete
+            // Cafe Name & Location Input
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -345,10 +310,9 @@ fun AddCafeScreen(
                     value = name,
                     onValueChange = { 
                         name = it
-                        isSuggestionsExpanded = true
                     },
                     label = { Text("Location / Cafe Name") },
-                    placeholder = { Text("Search location or type name...") },
+                    placeholder = { Text("e.g. Kopi Kenangan, Blue Bottle Coffee...") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -361,7 +325,6 @@ fun AddCafeScreen(
                                 name = "" 
                                 address = ""
                                 mapShareLink = null
-                                isSuggestionsExpanded = false
                             }) {
                                 Icon(
                                     imageVector = Icons.Default.Clear,
@@ -376,21 +339,6 @@ fun AddCafeScreen(
                         .fillMaxWidth()
                         .testTag("cafe_name_input")
                 )
-
-                // Match Criteria Dropdown List
-                val filteredSuggestions = remember(name, onlineSuggestions) {
-                    if (name.isBlank()) {
-                        emptyList()
-                    } else {
-                        val presets = presetLocations.filter {
-                            it.name.contains(name, ignoreCase = true) ||
-                            it.address.contains(name, ignoreCase = true)
-                        }
-                        (onlineSuggestions + presets).distinctBy { it.name.lowercase() + "_" + it.address.lowercase() }
-                    }
-                }
-
-                val isLink = false
 
                 // If there's a parsing error, display it
                 if (parseError != null) {
@@ -420,160 +368,6 @@ fun AddCafeScreen(
                         }
                     }
                 }
-
-                // If suggestions are present, show container
-                if (isSuggestionsExpanded && (filteredSuggestions.isNotEmpty() || isSearchingOnline)) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            if (isSearchingOnline) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 8.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(16.dp),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = "Searching places worldwide...",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                        )
-                                    }
-                                }
-
-                                if (filteredSuggestions.isNotEmpty()) {
-                                    Text(
-                                        text = "Matching Locations",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    filteredSuggestions.forEach { suggestion ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable {
-                                                    name = suggestion.name
-                                                    address = suggestion.address
-                                                    latitude = suggestion.latitude.toString()
-                                                    longitude = suggestion.longitude.toString()
-                                                    mapShareLink = suggestion.shareLink
-                                                    isSuggestionsExpanded = false
-                                                }
-                                                .padding(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.LocationOn,
-                                                contentDescription = "Location Pin",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
-                                                Text(
-                                                    text = suggestion.name,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                                Text(
-                                                    text = suggestion.address,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                                )
-                                            }
-                                        }
-                                    }
-                                                           }
-                        }
-                    }
-                }
-
-                // If search failed (name typed, but suggestions list is empty and not currently searching online)
-                if (isSuggestionsExpanded && name.isNotBlank() && filteredSuggestions.isEmpty() && !isSearchingOnline && !isLink) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.15f)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                            .testTag("manual_coordinates_override_card")
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Search Failed",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "No Places Found",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                            Text(
-                                text = "We couldn't find any places matching \"" + name + "\". Would you like to drop a pin manually on the map instead?",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            )
-                            Button(
-                                onClick = {
-                                    isManualModeEnabled = !isManualModeEnabled
-                                    if (address.isBlank()) {
-                                        address = name
-                                    }
-                                    isSuggestionsExpanded = false
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isManualModeEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("enable_manual_pin_drop_button")
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOn,
-                                        contentDescription = "Pin Drop"
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isManualModeEnabled) "Deactivate Manual Pin Drop" else "Set Coordinates Manually",
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
 
             // Address Input
@@ -598,12 +392,12 @@ fun AddCafeScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "Experience Rating",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -616,7 +410,7 @@ fun AddCafeScreen(
                         activeColor = Color(0xFFE07A5F)
                     )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
 
                     InteractiveStarRating(
                         rating = coffeeQualityRating,
@@ -626,7 +420,7 @@ fun AddCafeScreen(
                         activeColor = MaterialTheme.colorScheme.primary
                     )
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
 
                     InteractiveStarRating(
                         rating = atmosphereRating,
@@ -797,6 +591,88 @@ fun AddCafeScreen(
                     .testTag("cafe_favorite_drink_input")
             )
 
+            // Facilities Section with Preset Pills
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Facilities",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                val facilityOptions = remember {
+                    listOf(
+                        "Indoor" to Icons.Default.Home,
+                        "Outdoor" to Icons.Default.WbSunny,
+                        "Wi-Fi" to Icons.Default.Wifi,
+                        "Smoking/vape OK" to Icons.Default.SmokingRooms,
+                        "Power outlets" to Icons.Default.Bolt,
+                        "Parking" to Icons.Default.LocalParking,
+                        "Restroom" to Icons.Default.Wc,
+                        "Air conditioning" to Icons.Default.AcUnit,
+                        "Pet friendly" to Icons.Default.Pets
+                    )
+                }
+
+                val currentFacilityList = remember(facilities) {
+                    facilities.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+                }
+
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    facilityOptions.forEach { (facilityName, icon) ->
+                        val isSelected = currentFacilityList.any { it.equals(facilityName, ignoreCase = true) }
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .clickable {
+                                    val updatedList = if (isSelected) {
+                                        currentFacilityList.filter { !it.equals(facilityName, ignoreCase = true) }
+                                    } else {
+                                        currentFacilityList + facilityName
+                                    }
+                                    facilities = updatedList.joinToString("; ")
+                                }
+                                .testTag("facility_chip_$facilityName")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                )
+                                Text(
+                                    text = facilityName,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Diary Tags Section with Preset Chips Selection
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -810,8 +686,7 @@ fun AddCafeScreen(
                 )
                 
                 val presetTags = listOf(
-                    "Work-friendly", "Date Night", "Coffee Roastery", "Smokers Friendly",
-                    "Non Smokers Only", "Free Wi-Fi", "No Wifi", "Instagram-able"
+                    "Cozy", "Work-friendly", "Instagram-able", "Clean", "Date Night", "Coffee Roastery"
                 )
                 
                 val currentTagList = remember(tags) {
@@ -923,6 +798,7 @@ fun AddCafeScreen(
                             newPhotoUris = selectedPhotos.toList(),
                             mapShareLink = finalMapShareLink,
                             tags = tags.ifBlank { null },
+                            facilities = facilities.ifBlank { null },
                             favoriteDrink = favoriteDrink.ifBlank { null }
                         )
                     } else {
@@ -939,6 +815,7 @@ fun AddCafeScreen(
                             selectedPhotoUris = selectedPhotos.toList(),
                             mapShareLink = finalMapShareLink,
                             tags = tags.ifBlank { null },
+                            facilities = facilities.ifBlank { null },
                             favoriteDrink = favoriteDrink.ifBlank { null }
                         )
                     }
@@ -1338,14 +1215,14 @@ fun InteractiveStarRating(
         else -> ""
     }
 
-    Column(
+    Row(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = label,
@@ -1354,19 +1231,16 @@ fun InteractiveStarRating(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = if (rating > 0) "$rating/5 ($ratingDescription)" else "Not Rated",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (rating > 0) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
+                text = if (rating > 0) "$rating/5 • $ratingDescription" else "Not Rated",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = if (rating > 0) activeColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(5) { index ->
                 val starIndex = index + 1
@@ -1395,7 +1269,7 @@ fun InteractiveStarRating(
                         onRatingChanged(starIndex)
                     },
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(36.dp)
                         .testTag("${testTagPrefix}_$starIndex")
                 ) {
                     Icon(
@@ -1403,7 +1277,7 @@ fun InteractiveStarRating(
                         contentDescription = "Rate $starIndex stars out of 5",
                         tint = if (isSelected) activeColor else inactiveColor,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(22.dp)
                             .graphicsLayer(
                                 scaleX = scale,
                                 scaleY = scale

@@ -8,6 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -57,27 +59,31 @@ fun MainScreen(
             if (targetCafe == null) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
-                        NavigationBar(
-                            containerColor = MaterialTheme.colorScheme.background,
-                            modifier = Modifier
-                                .height(64.dp)
-                                .testTag("bottom_nav_bar")
-                        ) {
-                            val items = listOf(TabScreen.Journal, TabScreen.Stats, TabScreen.Places, TabScreen.Profile)
-                            items.forEach { screen ->
-                                NavigationBarItem(
-                                    icon = { Icon(imageVector = screen.icon, contentDescription = screen.title) },
-                                    label = { Text(screen.title) },
-                                    selected = currentTab.route == screen.route,
-                                    onClick = { currentTab = screen },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                    ),
-                                    modifier = Modifier.testTag("nav_item_${screen.route}")
-                                )
+                        Column {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                            NavigationBar(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier
+                                    .height(68.dp)
+                                    .testTag("bottom_nav_bar")
+                            ) {
+                                val items = listOf(TabScreen.Journal, TabScreen.Stats, TabScreen.Places, TabScreen.Profile)
+                                items.forEach { screen ->
+                                    NavigationBarItem(
+                                        icon = { Icon(imageVector = screen.icon, contentDescription = screen.title) },
+                                        label = { Text(screen.title) },
+                                        selected = currentTab.route == screen.route,
+                                        onClick = { currentTab = screen },
+                                        colors = NavigationBarItemDefaults.colors(
+                                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        ),
+                                        modifier = Modifier.testTag("nav_item_${screen.route}")
+                                    )
+                                }
                             }
                         }
                     }

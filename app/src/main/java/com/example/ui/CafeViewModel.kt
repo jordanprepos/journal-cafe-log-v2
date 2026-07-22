@@ -88,6 +88,7 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
         selectedPhotoUris: List<Uri>,
         mapShareLink: String? = null,
         tags: String? = null,
+        facilities: String? = null,
         favoriteDrink: String? = null
     ) {
         viewModelScope.launch {
@@ -120,6 +121,7 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
                     photoUris = secondaryPhotos,
                     mapShareLink = mapShareLink,
                     tags = tags,
+                    facilities = facilities,
                     favoriteDrink = favoriteDrink
                 )
 
@@ -147,6 +149,7 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
         newPhotoUris: List<Uri>,
         mapShareLink: String? = null,
         tags: String? = null,
+        facilities: String? = null,
         favoriteDrink: String? = null
     ) {
         viewModelScope.launch {
@@ -182,6 +185,7 @@ class CafeViewModel(private val repository: CafeRepository) : ViewModel() {
                     photoUris = secondaryPhotos,
                     mapShareLink = mapShareLink,
                     tags = tags,
+                    facilities = facilities,
                     favoriteDrink = favoriteDrink
                 )
 

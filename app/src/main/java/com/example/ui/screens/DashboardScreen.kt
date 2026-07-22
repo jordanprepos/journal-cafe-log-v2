@@ -64,11 +64,10 @@ fun DashboardScreen(
     var sortOption by remember { mutableStateOf(SortOption.MOST_RECENT) }
     var cafeToDelete by remember { mutableStateOf<CafeEntity?>(null) }
 
-    // Dynamic Tag Aggregation
+    // Dynamic Tag & Facility Aggregation
     val availableTags = remember(cafes) {
         val presets = listOf(
-            "Work-friendly", "Date Night", "Coffee Roastery", "Smokers Friendly",
-            "Non Smokers Only", "Free Wi-Fi", "No Wifi", "Instagram-able"
+            "Cozy", "Work-friendly", "Instagram-able", "Clean", "Date Night", "Coffee Roastery"
         )
         val tagsSet = LinkedHashSet<String>()
         // Always include the core predefined tags first
@@ -79,7 +78,6 @@ fun DashboardScreen(
             cafe.tags?.split(";")?.forEach { tag ->
                 val trimmed = tag.trim()
                 if (trimmed.isNotEmpty()) {
-                    // Try to match preset tag casing if possible to keep it unified
                     val matchedPreset = presets.firstOrNull { it.equals(trimmed, ignoreCase = true) }
                     if (matchedPreset != null) {
                         tagsSet.add(matchedPreset)
@@ -102,7 +100,9 @@ fun DashboardScreen(
             val matchesTag = if (selectedTagFilter == "All") {
                 true
             } else {
-                cafe.tags?.split(";")?.map { it.trim().lowercase() }?.contains(selectedTagFilter.lowercase()) == true
+                val tagMatch = cafe.tags?.split(";")?.map { it.trim().lowercase() }?.contains(selectedTagFilter.lowercase()) == true
+                val facilityMatch = cafe.facilities?.split(";")?.map { it.trim().lowercase() }?.contains(selectedTagFilter.lowercase()) == true
+                tagMatch || facilityMatch
             }
 
             matchesSearch && matchesTag
@@ -116,6 +116,7 @@ fun DashboardScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             // Keep FAB as bottom action for easy reach, styled beautifully in terracotta
             FloatingActionButton(
@@ -148,14 +149,15 @@ fun DashboardScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(top = 0.dp, bottom = 80.dp)
             ) {
                 // Header Block
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .statusBarsPadding()
                             .padding(top = 8.dp, bottom = 4.dp)
                     ) {
                         Row(
@@ -196,7 +198,7 @@ fun DashboardScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             ),
                             modifier = Modifier
-                                .padding(top = 2.dp)
+                                .padding(top = 0.dp)
                                 .testTag("journal_title")
                         )
                     }
@@ -207,20 +209,38 @@ fun DashboardScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search journals, locations, or notes...", style = MaterialTheme.typography.bodyMedium) },
-                        leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "Search", modifier = Modifier.size(20.dp)) },
+                        placeholder = { 
+                            Text(
+                                "Search journals, places, or notes...", 
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            ) 
+                        },
+                        leadingIcon = { 
+                            Icon(
+                                imageVector = Icons.Default.Search, 
+                                contentDescription = "Search", 
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                modifier = Modifier.size(20.dp)
+                            ) 
+                        },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(imageVector = Icons.Default.Close, contentDescription = "Clear Search", modifier = Modifier.size(20.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Close, 
+                                        contentDescription = "Clear Search", 
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
                         },
                         singleLine = true,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                             focusedContainerColor = MaterialTheme.colorScheme.surface,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surface
                         ),
@@ -238,7 +258,7 @@ fun DashboardScreen(
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
                             .padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         availableTags.forEach { tag ->
@@ -246,17 +266,24 @@ fun DashboardScreen(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { selectedTagFilter = tag },
-                                label = { Text(tag, style = MaterialTheme.typography.labelMedium) },
+                                label = { 
+                                    Text(
+                                        tag, 
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    ) 
+                                },
+                                shape = CircleShape,
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                                     containerColor = MaterialTheme.colorScheme.surface,
-                                    labelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    labelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = isSelected,
-                                    borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    borderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                                     selectedBorderColor = MaterialTheme.colorScheme.primary
                                 ),
                                 modifier = Modifier.testTag("tag_chip_$tag")
@@ -330,6 +357,7 @@ fun DashboardScreen(
                             selected = sortOption == SortOption.MOST_RECENT,
                             onClick = { sortOption = SortOption.MOST_RECENT },
                             label = { Text("Recent", style = MaterialTheme.typography.labelMedium) },
+                            shape = CircleShape,
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.AccessTime,
@@ -344,6 +372,7 @@ fun DashboardScreen(
                             selected = sortOption == SortOption.HIGHEST_RATING,
                             onClick = { sortOption = SortOption.HIGHEST_RATING },
                             label = { Text("Rating", style = MaterialTheme.typography.labelMedium) },
+                            shape = CircleShape,
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.Star,
@@ -480,7 +509,8 @@ fun JournalCafeCard(
             .clickable { onClick() }
             .testTag("cafe_card_${cafe.id}"),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
     ) {
         Row(
             modifier = Modifier
@@ -612,25 +642,43 @@ fun JournalCafeCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Tags flow display
-                if (!cafe.tags.isNullOrBlank()) {
+                // Facilities & Tags flow display
+                if (!cafe.facilities.isNullOrBlank() || !cafe.tags.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.horizontalScroll(rememberScrollState())
                     ) {
-                        cafe.tags.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach { tag ->
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = tag,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                        if (!cafe.facilities.isNullOrBlank()) {
+                            cafe.facilities.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach { facility ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = facility,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.SemiBold),
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
+                        }
+                        if (!cafe.tags.isNullOrBlank()) {
+                            cafe.tags.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach { tag ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = tag,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
