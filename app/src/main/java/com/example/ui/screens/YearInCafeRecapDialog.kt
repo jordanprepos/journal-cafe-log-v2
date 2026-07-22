@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -33,6 +35,8 @@ fun YearInCafeRecapDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     // 1. Compute dynamic stats from the logged cafes
     val totalVisited = cafes.size
     val avgRating = if (cafes.isNotEmpty()) cafes.map { it.rating }.average() else 0.0
@@ -68,6 +72,20 @@ fun YearInCafeRecapDialog(
         cafes.maxByOrNull { it.rating }
     }
     val topCafeName = topCafe?.name ?: "Blue Bottle"
+
+    val shareText = remember(totalVisited, avgRating, topDrink, topDrinkCount, topMonthName, topMonthCount, topCafeName) {
+        """
+        ☕ My Year in Café Recap! ☕
+        
+        • Cafés Visited: $totalVisited
+        • Average Rating: ${String.format(Locale.US, "%.1f", avgRating)}/5.0 ⭐
+        • Drink of the Year: $topDrink (ordered $topDrinkCount times) ☕
+        • Busiest Month: $topMonthName ($topMonthCount visits) 🗓️
+        • Top Café: $topCafeName 🏆
+        
+        Shared from my Cafe Journal app!
+        """.trimIndent()
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -271,7 +289,15 @@ fun YearInCafeRecapDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = { /* Share simulated callback */ },
+                        onClick = {
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, "Share your Year in Café recap")
+                            context.startActivity(shareIntent)
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp)

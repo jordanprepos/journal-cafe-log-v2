@@ -141,6 +141,7 @@ fun AddCafeScreen(
     val selectedPhotos = remember { mutableStateListOf<Uri>() }
     val editingCafe by cafeViewModel.editingCafe.collectAsState()
     val existingPhotos = remember { mutableStateListOf<String>() }
+    var showDraftRestoredBanner by remember { mutableStateOf(false) }
 
     // React to editingCafe to load or clear its data
     LaunchedEffect(editingCafe) {
@@ -161,21 +162,67 @@ fun AddCafeScreen(
             selectedPhotos.clear()
             editingCafe!!.photoUri?.let { existingPhotos.add(it) }
             editingCafe!!.photoUris?.split(";")?.filter { it.isNotEmpty() }?.forEach { existingPhotos.add(it) }
+            showDraftRestoredBanner = false
         } else {
-            name = ""
-            address = ""
+            val sharedPref = context.getSharedPreferences("cafe_draft_pref", android.content.Context.MODE_PRIVATE)
+            val draftName = sharedPref.getString("name", "") ?: ""
+            val draftAddress = sharedPref.getString("address", "") ?: ""
+            val draftTags = sharedPref.getString("tags", "") ?: ""
+            val draftFavoriteDrink = sharedPref.getString("favoriteDrink", "") ?: ""
+            val draftRating = sharedPref.getInt("rating", 5)
+            val draftCoffeeQuality = sharedPref.getInt("coffeeQualityRating", 5)
+            val draftAtmosphere = sharedPref.getInt("atmosphereRating", 5)
+            val draftNotes = sharedPref.getString("notes", "") ?: ""
+
+            if (draftName.isNotEmpty() || draftAddress.isNotEmpty() || draftTags.isNotEmpty() || draftFavoriteDrink.isNotEmpty() || draftNotes.isNotEmpty()) {
+                name = draftName
+                address = draftAddress
+                tags = draftTags
+                favoriteDrink = draftFavoriteDrink
+                rating = draftRating
+                coffeeQualityRating = draftCoffeeQuality
+                atmosphereRating = draftAtmosphere
+                notes = draftNotes
+                showDraftRestoredBanner = true
+            } else {
+                name = ""
+                address = ""
+                tags = ""
+                favoriteDrink = ""
+                rating = 5
+                coffeeQualityRating = 5
+                atmosphereRating = 5
+                notes = ""
+                showDraftRestoredBanner = false
+            }
+            
             mapShareLink = null
-            tags = ""
-            favoriteDrink = ""
             latitude = "37.7749"
             longitude = "-122.4194"
-            rating = 5
-            coffeeQualityRating = 5
-            atmosphereRating = 5
-            notes = ""
-            
             existingPhotos.clear()
             selectedPhotos.clear()
+        }
+    }
+
+    // Autosave when inputs change
+    LaunchedEffect(editingCafe, name, address, tags, favoriteDrink, rating, coffeeQualityRating, atmosphereRating, notes) {
+        if (editingCafe == null) {
+            val sharedPref = context.getSharedPreferences("cafe_draft_pref", android.content.Context.MODE_PRIVATE)
+            if (name.isNotEmpty() || address.isNotEmpty() || tags.isNotEmpty() || favoriteDrink.isNotEmpty() || notes.isNotEmpty() || rating != 5 || coffeeQualityRating != 5 || atmosphereRating != 5) {
+                sharedPref.edit().apply {
+                    putString("name", name)
+                    putString("address", address)
+                    putString("tags", tags)
+                    putString("favoriteDrink", favoriteDrink)
+                    putInt("rating", rating)
+                    putInt("coffeeQualityRating", coffeeQualityRating)
+                    putInt("atmosphereRating", atmosphereRating)
+                    putString("notes", notes)
+                    apply()
+                }
+            } else {
+                sharedPref.edit().clear().apply()
+            }
         }
     }
 
@@ -191,6 +238,9 @@ fun AddCafeScreen(
     // React to successful save
     LaunchedEffect(saveSuccess) {
         if (saveSuccess) {
+            val sharedPref = context.getSharedPreferences("cafe_draft_pref", android.content.Context.MODE_PRIVATE)
+            sharedPref.edit().clear().apply()
+            showDraftRestoredBanner = false
             cafeViewModel.resetSaveSuccess()
             onNavigateBack()
         }
@@ -226,6 +276,66 @@ fun AddCafeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (showDraftRestoredBanner && editingCafe == null) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("draft_restored_banner")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Draft restored",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Restored draft details",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        TextButton(
+                            onClick = {
+                                val sharedPref = context.getSharedPreferences("cafe_draft_pref", android.content.Context.MODE_PRIVATE)
+                                sharedPref.edit().clear().apply()
+                                name = ""
+                                address = ""
+                                tags = ""
+                                favoriteDrink = ""
+                                rating = 5
+                                coffeeQualityRating = 5
+                                atmosphereRating = 5
+                                notes = ""
+                                showDraftRestoredBanner = false
+                            },
+                            modifier = Modifier.testTag("clear_draft_button")
+                        ) {
+                            Text(
+                                "Clear Draft",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Cafe Name & Location Input with Autocomplete
             Column(
                 modifier = Modifier.fillMaxWidth(),

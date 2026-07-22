@@ -1,11 +1,17 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Map
@@ -47,13 +53,16 @@ fun MainScreen(
             label = "cafe_details_transition",
             modifier = Modifier.fillMaxSize()
         ) { targetCafe ->
+            val cafeDetailsTransitionScope = this
             if (targetCafe == null) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
                         NavigationBar(
                             containerColor = MaterialTheme.colorScheme.background,
-                            modifier = Modifier.testTag("bottom_nav_bar")
+                            modifier = Modifier
+                                .height(64.dp)
+                                .testTag("bottom_nav_bar")
                         ) {
                             val items = listOf(TabScreen.Journal, TabScreen.Stats, TabScreen.Places, TabScreen.Profile)
                             items.forEach { screen ->
@@ -78,33 +87,42 @@ fun MainScreen(
                             .fillMaxSize()
                             .padding(innerPadding)
                     ) {
-                        when (currentTab) {
-                            TabScreen.Journal -> {
-                                DashboardScreen(
-                                    cafeViewModel = cafeViewModel,
-                                    authViewModel = authViewModel,
-                                    onNavigateToAddCafe = onNavigateToAddCafe,
-                                    onShowRecap = { showRecap = true },
-                                    sharedTransitionScope = this@SharedTransitionLayout,
-                                    animatedVisibilityScope = this@AnimatedContent
-                                )
-                            }
-                            TabScreen.Stats -> {
-                                StatsScreen(
-                                    cafeViewModel = cafeViewModel
-                                )
-                            }
-                            TabScreen.Places -> {
-                                PlacesScreen(
-                                    cafeViewModel = cafeViewModel
-                                )
-                            }
-                            TabScreen.Profile -> {
-                                ProfileScreen(
-                                    authViewModel = authViewModel,
-                                    cafeViewModel = cafeViewModel,
-                                    onShowRecap = { showRecap = true }
-                                )
+                        AnimatedContent(
+                            targetState = currentTab,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                            },
+                            label = "tab_fade_transition",
+                            modifier = Modifier.fillMaxSize()
+                        ) { targetTab ->
+                            when (targetTab) {
+                                TabScreen.Journal -> {
+                                    DashboardScreen(
+                                        cafeViewModel = cafeViewModel,
+                                        authViewModel = authViewModel,
+                                        onNavigateToAddCafe = onNavigateToAddCafe,
+                                        onShowRecap = { showRecap = true },
+                                        sharedTransitionScope = this@SharedTransitionLayout,
+                                        animatedVisibilityScope = cafeDetailsTransitionScope
+                                    )
+                                }
+                                TabScreen.Stats -> {
+                                    StatsScreen(
+                                        cafeViewModel = cafeViewModel
+                                    )
+                                }
+                                TabScreen.Places -> {
+                                    PlacesScreen(
+                                        cafeViewModel = cafeViewModel
+                                    )
+                                }
+                                TabScreen.Profile -> {
+                                    ProfileScreen(
+                                        authViewModel = authViewModel,
+                                        cafeViewModel = cafeViewModel,
+                                        onShowRecap = { showRecap = true }
+                                    )
+                                }
                             }
                         }
                     }

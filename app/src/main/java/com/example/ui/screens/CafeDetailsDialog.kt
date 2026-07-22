@@ -5,8 +5,11 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +64,8 @@ fun CafeDetailsDialog(
 
     val formatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
     val formattedDate = remember(cafe.timestamp) { formatter.format(Date(cafe.timestamp)) }
+
+    var activeLightboxPhotoIndex by remember { mutableStateOf<Int?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -162,11 +167,13 @@ fun CafeDetailsDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(allPhotos) { path ->
+                        itemsIndexed(allPhotos) { index, path ->
                             Card(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier
                                     .size(160.dp, 120.dp)
+                                    .clickable { activeLightboxPhotoIndex = index }
+                                    .testTag("photo_gallery_item_$index")
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
@@ -292,8 +299,10 @@ fun CafeDetailsDialog(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Row(
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             cafe.tags.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach { tag ->
@@ -362,6 +371,14 @@ fun CafeDetailsDialog(
                 }
             }
         }
+    }
+
+    if (activeLightboxPhotoIndex != null) {
+        PhotoLightboxDialog(
+            photoPaths = allPhotos,
+            initialIndex = activeLightboxPhotoIndex!!,
+            onDismiss = { activeLightboxPhotoIndex = null }
+        )
     }
 }
 

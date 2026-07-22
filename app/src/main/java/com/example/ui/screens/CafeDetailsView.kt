@@ -9,8 +9,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,6 +70,8 @@ fun CafeDetailsView(
     val formatter = remember { SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()) }
     val formattedDate = remember(cafe.timestamp) { formatter.format(Date(cafe.timestamp)) }
 
+    var activeLightboxPhotoIndex by remember { mutableStateOf<Int?>(null) }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background
@@ -95,6 +100,7 @@ fun CafeDetailsView(
                             contentDescription = "Cafe Image",
                             modifier = Modifier
                                 .fillMaxSize()
+                                .clickable { activeLightboxPhotoIndex = 0 }
                                 .sharedElement(
                                     rememberSharedContentState(key = "photo-${cafe.id}"),
                                     animatedVisibilityScope = animatedVisibilityScope
@@ -298,10 +304,13 @@ fun CafeDetailsView(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(allPhotos) { path ->
+                            itemsIndexed(allPhotos) { index, path ->
                                 Card(
                                     shape = RoundedCornerShape(16.dp),
-                                    modifier = Modifier.size(180.dp, 135.dp),
+                                    modifier = Modifier
+                                        .size(180.dp, 135.dp)
+                                        .clickable { activeLightboxPhotoIndex = index }
+                                        .testTag("photo_gallery_item_$index"),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
                                     AsyncImage(
@@ -397,8 +406,10 @@ fun CafeDetailsView(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        Row(
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             cafe.tags.split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEach { tag ->
@@ -465,5 +476,13 @@ fun CafeDetailsView(
                 }
             }
         }
+    }
+
+    if (activeLightboxPhotoIndex != null) {
+        PhotoLightboxDialog(
+            photoPaths = allPhotos,
+            initialIndex = activeLightboxPhotoIndex!!,
+            onDismiss = { activeLightboxPhotoIndex = null }
+        )
     }
 }

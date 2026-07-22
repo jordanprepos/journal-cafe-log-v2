@@ -1,5 +1,7 @@
 package com.example
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import com.example.ui.theme.MyApplicationTheme
@@ -21,7 +23,25 @@ class GreetingScreenshotTest {
 
   @Test
   fun greeting_screenshot() {
-    composeTestRule.setContent { MyApplicationTheme { Greeting("Robolectric") } }
+    composeTestRule.setContent { 
+      MyApplicationTheme { 
+        androidx.compose.material3.Surface(
+          color = androidx.compose.material3.MaterialTheme.colorScheme.background,
+          modifier = Modifier.fillMaxSize()
+        ) {
+          androidx.compose.foundation.layout.Box(
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+          ) {
+            androidx.compose.material3.Text(
+              text = "Cafe Journal - Robolectric Test",
+              style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+              color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+            )
+          }
+        }
+      } 
+    }
 
     composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
   }

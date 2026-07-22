@@ -11,6 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -82,7 +85,11 @@ fun AppNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = if (user == null) "login" else "main"
+        startDestination = if (user == null) "login" else "main",
+        enterTransition = { fadeIn(animationSpec = tween(400)) },
+        exitTransition = { fadeOut(animationSpec = tween(400)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(400)) },
+        popExitTransition = { fadeOut(animationSpec = tween(400)) }
     ) {
         composable("login") {
             LoginScreen(
